@@ -1,4 +1,4 @@
-from flask import Flask
+From flask import Flask
 from threading import Thread
 
 import asyncio
@@ -551,4 +551,4 @@ def keep_alive():
 # --- تشغيل البوت ---
 if __name__ == "__main__":
     keep_alive()
-    bot.run()
+    bot.run(TOKEN)
