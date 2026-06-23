@@ -551,4 +551,5 @@ def keep_alive():
 # --- تشغيل البوت ---
 if __name__ == "__main__":
     keep_alive()
-    bot.run(TOKEN)
+    bot.run(os.environ.get('TOKEN'))
+
