@@ -1,3 +1,6 @@
+from flask import Flask
+from threading import Thread
+
 import asyncio
 import datetime
 import logging
@@ -531,5 +534,21 @@ async def cmd_server_info(interaction: discord.Interaction):
     embed.add_field(name="تاريخ الإنشاء", value=g.created_at.strftime("%Y-%m-%d"), inline=True)
     if g.icon: embed.set_thumbnail(url=g.icon.url)
     await interaction.response.send_message(embed=embed, ephemeral=True)
+# --- كود إبقاء البوت حياً ---
+app = Flask('')
 
-bot.run(TOKEN)
+@app.route('/')
+def home():
+    return "MasterGuard is Online!"
+
+def run_flask():
+    app.run(host='0.0.0.0', port=8080)
+
+def keep_alive():
+    t = Thread(target=run_flask)
+    t.start()
+
+# --- تشغيل البوت ---
+if __name__ == "__main__":
+    keep_alive()
+    bot.run(TOKEN)
