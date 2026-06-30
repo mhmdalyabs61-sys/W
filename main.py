@@ -355,6 +355,18 @@ async def on_ready():
 async def sync(ctx):
     await bot.tree.sync()
     await ctx.send("✅ تم تحديث الأوامر!")
+from flask import Flask
+from threading import Thread
+
+app = Flask('')
+@app.route('/')
+def home(): return "البوت يعمل"
+def run(): app.run(host='0.0.0.0', port=8080)
+
+# تشغيل الويب سيرفر في الخلفية
+Thread(target=run).start()
+
+# تشغيل البوت
 import os
 TOKEN = os.environ.get('MASTERGUARD_TOKEN') or 'YOUR_BOT_TOKEN_HERE'
 bot.run(TOKEN)
