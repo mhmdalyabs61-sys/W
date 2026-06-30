@@ -1,4 +1,4 @@
-Import discord
+import discord
 from discord.ext import commands
 from discord import app_commands
 import json, os, asyncio
@@ -355,5 +355,7 @@ async def on_ready():
 async def sync(ctx):
     await bot.tree.sync()
     await ctx.send("✅ تم تحديث الأوامر!")
-
+import os
+TOKEN = os.environ.get('MASTERGUARD_TOKEN') or 'YOUR_BOT_TOKEN_HERE'
 bot.run(TOKEN)
+
