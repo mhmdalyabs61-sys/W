@@ -350,6 +350,7 @@ def run(): app.run(host='0.0.0.0', port=8080)
 
 # تشغيل الويب سيرفر في الخلفية
 Thread(target=run).start()
+
 user_scores = {}
 
 @bot.command(name="نقاط", aliases=["top", "score"])
@@ -376,16 +377,14 @@ fast_words = [
 async def fast_game(ctx):
     target_word = random.choice(fast_words)
     
-    img = Image.new('RGB', (420, 140), color=(45, 47, 53))
-    d = ImageDraw.Draw(img)
-    d.text((40, 50), f"اكتب بسرعة: {target_word}", fill=(255, 255, 255))
+    embed = discord.Embed(
+        title="⚡ مسابقة السرعة",
+        description=f"أسرع شخص يكتب هذه الكلمة في الشات:\n\n# 🎯 `{target_word}`",
+        color=0xffaa00
+    )
+    embed.set_footer(text="لديك 15 ثانية فقط!")
     
-    buffer = io.BytesIO()
-    img.save(buffer, format="PNG")
-    buffer.seek(0)
-    
-    file = discord.File(buffer, filename="fast.png")
-    await ctx.send(content="⚡ **مسابقة السرعة بدأت!** أسرع شخص يكتب الكلمة في الشات:", file=file)
+    await ctx.send(embed=embed)
     
     start_time = time.time()
     
@@ -400,7 +399,7 @@ async def fast_game(ctx):
         
         await ctx.send(f"🏆 كفو <@{msg.author.id}>! فزت بالمركز الأول بوقت **{elapsed} ثانية** وحصلت على نقطة! 🎉")
     except Exception:
-        await ctx.send(f"⏳ انتهى الوقت! محد كتب الكلمة الصحيحة ({target_word}).")
+        await ctx.send(f"⏳ انتهى الوقت! محد كتب الكلمة الصحيحة (`{target_word}`).")
 
 countries_list = [
     "المملكة العربية السعودية", "الإمارات", "مصر", "الكويت", "قطر", "البحرين", 
@@ -419,16 +418,15 @@ countries_list = [
 async def guess_country(ctx):
     target_country = random.choice(countries_list)
     
-    img = Image.new('RGB', (460, 150), color=(35, 39, 42))
-    d = ImageDraw.Draw(img)
-    d.text((30, 60), "خمن اسم هذه الدولة بالشات:", fill=(0, 230, 180))
+    embed = discord.Embed(
+        title="🌍 لعبة خمن الدولة",
+        description="البوت اختار دولة عشوائية، اكتب اسمها الصحيح بالشات!",
+        color=0x00e6b4
+    )
+    embed.add_field(name="💡 تلميح", value=f"عدد حروف الدولة: **{len(target_country)}** حروف", inline=False)
+    embed.set_footer(text="لديك 20 ثانية للتخمين!")
     
-    buffer = io.BytesIO()
-    img.save(buffer, format="PNG")
-    buffer.seek(0)
-    
-    file = discord.File(buffer, filename="guess.png")
-    await ctx.send(content=f"🌍 **لعبة خمن الدولة!** البوت اختار دولة، أسرع شخص يكتب اسمها الصحيح يفوز خلال 20 ثانية!\n*(تلميح: عدد حروفها {len(target_country)})*", file=file)
+    await ctx.send(embed=embed)
     
     def check(m):
         return m.channel == ctx.channel and m.content.strip() == target_country and not m.author.bot
