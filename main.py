@@ -352,10 +352,7 @@ def run(): app.run(host='0.0.0.0', port=8080)
 Thread(target=run).start()
 
 
-import random
-import time
-import discord
-from discord.ext import commands
+
 
 # قاموس حفظ النقاط المشترك
 user_scores = {}
