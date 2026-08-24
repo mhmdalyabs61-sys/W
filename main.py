@@ -349,6 +349,103 @@ def run(): app.run(host='0.0.0.0', port=8080)
 
 # تشغيل الويب سيرفر في الخلفية
 Thread(target=run).start()
+user_scores = {}
+
+@bot.command(name="نقاط", aliases=["top", "score"])
+async def show_score(ctx, member: discord.Member = None):
+    target = member or ctx.author
+    score = user_scores.get(target.id, 0)
+    await ctx.send(f"📊 نقاط اللاعب <@{target.id}> هي: **{score} نقطة** 🏆")
+
+fast_words = [
+    "صحن", "سيف", "سياره", "طياره", "كرسي", "بيت", "قلم", "دفتر", "باب", "شباك",
+    "جوال", "ساعة", "طاولة", "ثلاجة", "مكيف", "سماعة", "مفاتيح", "قطار", "سفينة", "دراجة",
+    "تلفزيون", "مراية", "سحاب", "قمر", "شمس", "نجوم", "بحر", "نهر", "جبل", "صحراء",
+    "مطر", "طريق", "تفاح", "موز", "برتقال", "خيار", "طماطم", "بطيخ", "عنب", "دجاج",
+    "لحم", "سمك", "خبز", "جبن", "حليب", "ماء", "عصير", "شاي", "قهوة", "سكر",
+    "ملح", "زيت", "قدر", "ملعقة", "شوكة", "كاس", "سجادة", "وسادة", "بطانية", "سرير",
+    "دولاب", "قميص", "بنطلون", "حذاء", "شماغ", "عقال", "نظارة", "حزام", "سورة", "مسجد",
+    "قارب", "حوت", "أسد", "نمر", "فهد", "ذيب", "ثعلب", "ارنب", "قرد", "دب",
+    "فيل", "زرافة", "حصان", "خروف", "بقرة", "جمل", "صقر", "نسر", "حمامة", "عصفور",
+    "ديك", "دجاجة", "فرن", "غسالة", "مروحة", "لمبة", "سلك", "بطارية", "شاحن",
+    "كمبيوتر", "لابتوب", "ماوس", "لوحة", "مكتب", "صندوق", "حقيبة", "حائط", "ارضية", "سقف"
+]
+
+@bot.command(name="اسرع", aliases=["fast"])
+async def fast_game(ctx):
+    target_word = random.choice(fast_words)
+    
+    img = Image.new('RGB', (420, 140), color=(45, 47, 53))
+    d = ImageDraw.Draw(img)
+    d.text((40, 50), f"اكتب بسرعة: {target_word}", fill=(255, 255, 255))
+    
+    buffer = io.BytesIO()
+    img.save(buffer, format="PNG")
+    buffer.seek(0)
+    
+    file = discord.File(buffer, filename="fast.png")
+    await ctx.send(content="⚡ **مسابقة السرعة بدأت!** أسرع شخص يكتب الكلمة في الشات:", file=file)
+    
+    start_time = time.time()
+    
+    def check(m):
+        return m.channel == ctx.channel and m.content.strip() == target_word and not m.author.bot
+
+    try:
+        msg = await bot.wait_for('message', timeout=15.0, check=check)
+        elapsed = round(time.time() - start_time, 2)
+        
+        user_scores[msg.author.id] = user_scores.get(msg.author.id, 0) + 1
+        
+        await ctx.send(f"🏆 كفو <@{msg.author.id}>! فزت بالمركز الأول بوقت **{elapsed} ثانية** وحصلت على نقطة! 🎉")
+    except Exception:
+        await ctx.send(f"⏳ انتهى الوقت! محد كتب الكلمة الصحيحة ({target_word}).")
+
+countries_list = [
+    "المملكة العربية السعودية", "الإمارات", "مصر", "الكويت", "قطر", "البحرين", 
+    "عمان", "الأردن", "لبنان", "العراق", "سوريا", "فلسطين", "المغرب", 
+    "الجزائر", "تونس", "ليبيا", "السودان", "اليمن", "الصومال", "جيبوتي", 
+    "موريتانيا", "تركيا", "إيران", "باكستان", "الهند", "الصين", "اليابان", 
+    "كوريا الجنوبية", "إندونيسيا", "ماليزيا", "تايلاند", "فيتنام", "روسيا", 
+    "ألمانيا", "فرنسا", "إيطاليا", "إسبانيا", "المملكة المتحدة", "البرتغال", 
+    "هولندا", "بلجيكا", "سويسرا", "النمسا", "اليونان", "السويد", "النرويج", 
+    "الدنمارك", "فنلندا", "بولندا", "أوكرانيا", "الولايات المتحدة", "كندا", 
+    "المكسيك", "البرازيل", "الأرجنتين", "كولومبيا", "تشيلي", "أستراليا", 
+    "نيوزيلندا", "جنوب أفريقيا"
+]
+
+@bot.command(name="خمن", aliases=["guess"])
+async def guess_country(ctx):
+    target_country = random.choice(countries_list)
+    
+    img = Image.new('RGB', (460, 150), color=(35, 39, 42))
+    d = ImageDraw.Draw(img)
+    d.text((30, 60), "خمن اسم هذه الدولة بالشات:", fill=(0, 230, 180))
+    
+    buffer = io.BytesIO()
+    img.save(buffer, format="PNG")
+    buffer.seek(0)
+    
+    file = discord.File(buffer, filename="guess.png")
+    await ctx.send(content=f"🌍 **لعبة خمن الدولة!** البوت اختار دولة، أسرع شخص يكتب اسمها الصحيح يفوز خلال 20 ثانية!\n*(تلميح: عدد حروفها {len(target_country)})*", file=file)
+    
+    def check(m):
+        return m.channel == ctx.channel and m.content.strip() == target_country and not m.author.bot
+
+    try:
+        msg = await bot.wait_for('message', timeout=20.0, check=check)
+        user_scores[msg.author.id] = user_scores.get(msg.author.id, 0) + 1
+        await ctx.send(f"🎯 إجابة صحيحة يا <@{msg.author.id}>! الدولة هي **{target_country}** (+1 نقطة)")
+    except Exception:
+        await ctx.send(f"⏰ انتهى الوقت! الدولة الصحيحة كانت: **{target_country}**")
+
+@bot.command(name="ألعاب", aliases=["help_games"])
+async def games_help(ctx):
+    embed = discord.Embed(title="🎮 قائمة ألعاب البوت", color=0x00ffcc)
+    embed.add_field(name="`!اسرع`", value="لعبة سرعة الكتابة بكلمات عشوائية.", inline=False)
+    embed.add_field(name="`!خمن`", value="لعبة تخمين أسماء الدول.", inline=False)
+    embed.add_field(name="`!نقاط`", value="عرض رصيدك والنقاط.", inline=False)
+    await ctx.send(embed=embed)
 
 # تشغيل البوت
 import os
