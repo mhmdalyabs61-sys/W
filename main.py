@@ -368,13 +368,11 @@ def fix_arabic(text):
 # ----------------------------------------------------
 @bot.command(name="نقاط", aliases=["top", "score", "points"])
 async def show_score(ctx, member: discord.Member = None):
-    # لو فحصت لاعب معين
     if member:
         score = user_scores.get(member.id, 0)
         await ctx.send(f"📊 نقاط اللاعب <@{member.id}> هي: **{score} نقطة** 🏆")
         return
 
-    # لو ما حددت أحد، يعرض لوحة المتصدرين
     if not user_scores:
         await ctx.send("📉 ما فيه أي نقاط مسجلة لحد الحين!")
         return
@@ -438,7 +436,7 @@ async def fast_game(ctx):
         await ctx.send(f"⏳ انتهى الوقت! محد كتب الكلمة الصحيحة (`{target_word}`).")
 
 # ----------------------------------------------------
-# 3. لعبة خمن الدولة
+# 3. لعبة خمن الدولة (الـ 60 دولة كاملة)
 # ----------------------------------------------------
 countries_images = [
     # 1 إلى 10
@@ -520,14 +518,15 @@ async def guess_country(ctx):
     target_country = item["name"]
     
     embed = discord.Embed(
-        title="📸 تحدي خمن الدولة (الوضع السريع)!",
+        title="📸 تحدي خمن الدولة!",
         description=f"💡 تلميح: {item['hint']}\nأسرع شخص يكتب اسم الدولة بالشات!",
         color=0x00e6b4
     )
     embed.set_image(url=item["img"])
     embed.set_footer(text="لديك 10 ثوانٍ فقط للتخمين!")
     
-    await ctx.send(embed=embed)
+    # يرسل الرابط والـ Embed مع بعض عشان تضمن الصورة تطلع
+    await ctx.send(content=f"**رابط صورة العلم:** {item['img']}", embed=embed)
     
     def check(m):
         user_text = m.content.strip()
@@ -539,6 +538,7 @@ async def guess_country(ctx):
         await ctx.send(f"🎯 كفو يا <@{msg.author.id}>! الدولة هي **{target_country}** (+1 نقطة)")
     except Exception:
         await ctx.send(f"⏰ خلص الوقت! الدولة كانت: **{target_country}**")
+
 
 
 
