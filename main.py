@@ -511,22 +511,33 @@ countries_images = [
     {"name": "فنلندا", "img": "https://upload.wikimedia.org/wikipedia/commons/thumb/b/bc/Flag_of_Finland.svg/800px-Flag_of_Finland.svg.png", "hint": "علم فنلندا 🇫🇮"},
     {"name": "اليونان", "img": "https://upload.wikimedia.org/wikipedia/commons/thumb/5/5c/Flag_of_Greece.svg/800px-Flag_of_Greece.svg.png", "hint": "علم اليونان 🇬🇷"}
 ]
+import io
+import aiohttp # تأكد إن هالمكتبة موجودة عندك (موجودة افتراضياً مع discord.py)
 
 @bot.command(name="خمن", aliases=["guess"])
 async def guess_country(ctx):
     item = random.choice(countries_images)
     target_country = item["name"]
     
-    embed = discord.Embed(
-        title="📸 تحدي خمن الدولة!",
-        description=f"💡 تلميح: {item['hint']}\nأسرع شخص يكتب اسم الدولة بالشات!",
-        color=0x00e6b4
-    )
-    embed.set_image(url=item["img"])
-    embed.set_footer(text="لديك 10 ثوانٍ فقط للتخمين!")
+    # تحميل الصورة وتحويلها إلى ملف يقدر ديسكورد يرفعه مباشرة
+    async with aiohttp.ClientSession() as session:
+        async with session.get(item["img"]) as resp:
+            if resp.status == 200:
+                image_bytes = await resp.read()
+                # إنشاء ملف ديسكورد من البايتس
+                file = discord.File(io.BytesIO(image_bytes), filename="flag.png")
+            else:
+                await ctx.send("❌ صار خطأ في تحميل صورة العلم!")
+                return
+
+    embed = discord.Embed(title="📸 تحدي خمن الدولة!", color=0x00e6b4)
+    # ربط الإمبيد بالصورة المرفقة مباشرة داخل الشات
+    embed.set_image(url="attachment://flag.png")
+    embed.add_field(name="💡 تلميح:", value=item['hint'], inline=False)
+    embed.set_footer(text="أسرع شخص يكتب اسم الدولة بالشات! لديك 10 ثوانٍ فقط.")
     
-    # يرسل الرابط والـ Embed مع بعض عشان تضمن الصورة تطلع
-    await ctx.send(content=f"**رابط صورة العلم:** {item['img']}", embed=embed)
+    # إرسال الصورة كملف مرفق مع الإمبيد
+    await ctx.send(file=file, embed=embed)
     
     def check(m):
         user_text = m.content.strip()
@@ -538,6 +549,8 @@ async def guess_country(ctx):
         await ctx.send(f"🎯 كفو يا <@{msg.author.id}>! الدولة هي **{target_country}** (+1 نقطة)")
     except Exception:
         await ctx.send(f"⏰ خلص الوقت! الدولة كانت: **{target_country}**")
+
+
 
 
 
