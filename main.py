@@ -1,9 +1,10 @@
-import discord
+import discord, json, os, asyncio, random, time, io
 from discord.ext import commands
 from discord import app_commands
-import json, os, asyncio
 from datetime import timedelta, datetime
 from typing import Union, Optional, List, Dict
+from PIL import Image, ImageDraw
+
 
 # ══════════════════════════════════════════════════════════════
 #                   ضع التوكن هنا ↓
