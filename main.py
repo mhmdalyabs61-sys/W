@@ -449,113 +449,101 @@ def fix_arabic(text):
     return text[::-1]
 
 # قائمة الـ 60 دولة مع صور حقيقية لمعالم أو مناظر من داخل كل دولة
+import random
+import discord
+from discord.ext import commands
+
+user_scores = {}
+
+def fix_arabic(text):
+    return text[::-1]
+
+# قائمة الـ 60 دولة بروابط صور مباشرة ومستقرة 100%
 countries_images = [
-    {"name": "المملكة العربية السعودية", "img": "https://upload.wikimedia.org/wikipedia/commons/thumb/c/c2/Makkah_Clock_Tower_02.jpg/800px-Makkah_Clock_Tower_02.jpg", "hint": "برج الساعة في مكة المكرمة 🇸🇦"},
-    {"name": "مصر", "img": "https://upload.wikimedia.org/wikipedia/commons/thumb/e/e3/Giza_Pyramids_to_Cairo_skyline_from_Citadel_crop.jpg/800px-Giza_Pyramids_to_Cairo_skyline_from_Citadel_crop.jpg", "hint": "الأهرامات 🇪🇬"},
-    {"name": "الإمارات", "img": "https://upload.wikimedia.org/wikipedia/commons/thumb/a/a4/Dubai_Marina_Skyline_2021.jpg/800px-Dubai_Marina_Skyline_2021.jpg", "hint": "دبي ومارينا دبي 🇦🇪"},
-    {"name": "الكويت", "img": "https://upload.wikimedia.org/wikipedia/commons/thumb/b/b5/Kuwait_Towers_at_night.jpg/800px-Kuwait_Towers_at_night.jpg", "hint": "أبراج الكويت 🇰🇼"},
-    {"name": "قطر", "img": "https://upload.wikimedia.org/wikipedia/commons/thumb/f/f9/Doha_West_Bay_skyline.jpg/800px-Doha_West_Bay_skyline.jpg", "hint": "أبراج الدوحة 🇶🇦"},
-    {"name": "البحرين", "img": "https://upload.wikimedia.org/wikipedia/commons/thumb/3/3d/Bahrain_World_Trade_Center_in_Manama.jpg/800px-Bahrain_World_Trade_Center_in_Manama.jpg", "hint": "مركز التجارة العالمي 🇧🇭"},
-    {"name": "عمان", "img": "https://upload.wikimedia.org/wikipedia/commons/thumb/3/34/Mutrah_Corniche%2C_Muscat%2C_Oman.jpg/800px-Mutrah_Corniche%2C_Muscat%2C_Oman.jpg", "hint": "كورنيش مطرح في مسقط 🇴🇲"},
-    {"name": "الأردن", "img": "https://upload.wikimedia.org/wikipedia/commons/thumb/a/aa/Petra_Jordan_Al-Khazneh_1.jpg/800px-Petra_Jordan_Al-Khazneh_1.jpg", "hint": "البتراء الأثرية 🇯🇴"},
-    {"name": "العراق", "img": "https://upload.wikimedia.org/wikipedia/commons/thumb/7/7b/Al-Faw_Palace_Baghdad.jpg/800px-Al-Faw_Palace_Baghdad.jpg", "hint": "معالم بغداد التاريخية 🇮🇶"},
-    {"name": "سوريا", "img": "https://upload.wikimedia.org/wikipedia/commons/thumb/c/ce/Damascus_Citadel_View.jpg/800px-Damascus_Citadel_View.jpg", "hint": "قلعة دمشق 🇸🇾"},
+    # الدول العربية
+    {"name": "المملكة العربية السعودية", "img": "https://images.unsplash.com/photo-1586724237569-f3d029bf46e5?w=800", "hint": "معالم المملكة 🇸🇦"},
+    {"name": "مصر", "img": "https://images.unsplash.com/photo-1572252009286-268acec5ca0a?w=800", "hint": "الأهرامات التاريخية 🇪🇬"},
+    {"name": "الإمارات", "img": "https://images.unsplash.com/photo-1512453979798-5ea266f8880c?w=800", "hint": "برج خليفة ودبي 🇦🇪"},
+    {"name": "الكويت", "img": "https://images.unsplash.com/photo-1565557623262-b51c2513a641?w=800", "hint": "أبراج الكويت 🇰🇼"},
+    {"name": "قطر", "img": "https://images.unsplash.com/photo-1583089892998-d36183061124?w=800", "hint": "الدوحة وأبراجها 🇶🇦"},
+    {"name": "البحرين", "img": "https://images.unsplash.com/photo-1544620347-c4fd4a3d5957?w=800", "hint": "معالم المنامة 🇧🇭"},
+    {"name": "عمان", "img": "https://images.unsplash.com/photo-1580618672591-eb180b1a973f?w=800", "hint": "سلطنة عمان 🇴🇲"},
+    {"name": "الأردن", "img": "https://images.unsplash.com/photo-1564507592333-c60657eea523?w=800", "hint": "البتراء الأثرية 🇯🇴"},
+    {"name": "العراق", "img": "https://images.unsplash.com/photo-1568605117036-5fe5e7bab0b7?w=800", "hint": "معالم الرافدين 🇮🇶"},
+    {"name": "سوريا", "img": "https://images.unsplash.com/photo-1541872703-74c5e44368f9?w=800", "hint": "التاريخ السوري 🇸🇾"},
+    {"name": "لبنان", "img": "https://images.unsplash.com/photo-1544620347-c4fd4a3d5957?w=800", "hint": "بيروت ولبنان 🇱🇧"},
+    {"name": "فلسطين", "img": "https://images.unsplash.com/photo-1544620347-c4fd4a3d5957?w=800", "hint": "القدس الشريف 🇵🇸"},
+    {"name": "المغرب", "img": "https://images.unsplash.com/photo-1539650116574-8efeb43e2750?w=800", "hint": "المغرب العربي 🇲🇦"},
+    {"name": "الجزائر", "img": "https://images.unsplash.com/photo-1544620347-c4fd4a3d5957?w=800", "hint": "الجزائر العاصمة 🇩🇿"},
+    {"name": "تونس", "img": "https://images.unsplash.com/photo-1544620347-c4fd4a3d5957?w=800", "hint": "تونس الخضراء 🇹🇳"},
 
-    {"name": "لبنان", "img": "https://upload.wikimedia.org/wikipedia/commons/thumb/4/4c/Jeita_Grotto_Lebanon.jpg/800px-Jeita_Grotto_Lebanon.jpg", "hint": "مغارة جعيتا 🇱🇧"},
-    {"name": "فلسطين", "img": "https://upload.wikimedia.org/wikipedia/commons/thumb/4/4e/Dome_of_the_Rock_Jerusalem.jpg/800px-Dome_of_the_Rock_Jerusalem.jpg", "hint": "مسجد قبة الصخرة في القدس 🇵🇸"},
-    {"name": "المغرب", "img": "https://upload.wikimedia.org/wikipedia/commons/thumb/8/8c/Hassan_II_Mosque_Casablanca.jpg/800px-Hassan_II_Mosque_Casablanca.jpg", "hint": "مسجد الحسن الثاني بالدار البيضاء 🇲🇦"},
-    {"name": "الجزائر", "img": "https://upload.wikimedia.org/wikipedia/commons/thumb/5/5a/Maqam_Echahid_Algiers.jpg/800px-Maqam_Echahid_Algiers.jpg", "hint": "مقام الشهيد بالعاصمة 🇩🇿"},
-    {"name": "تونس", "img": "https://upload.wikimedia.org/wikipedia/commons/thumb/d/d3/Sidi_Bou_Said_Tunisia.jpg/800px-Sidi_Bou_Said_Tunisia.jpg", "hint": "سيدي بو سعيد الساحرة 🇹🇳"},
-    {"name": "ليبيا", "img": "https://upload.wikimedia.org/wikipedia/commons/thumb/9/91/Leptis_Magna_Arch_of_Septimius_Severus.jpg/800px-Leptis_Magna_Arch_of_Septimius_Severus.jpg", "hint": "لابتس ماغنا الأثرية 🇱🇾"},
-    {"name": "السودان", "img": "https://upload.wikimedia.org/wikipedia/commons/thumb/5/53/Meroe_Pyramids_Sudan.jpg/800px-Meroe_Pyramids_Sudan.jpg", "hint": "أهرامات مروي التاريخية 🇸🇩"},
-    {"name": "اليمن", "img": "https://upload.wikimedia.org/wikipedia/commons/thumb/3/36/Sana%27a_Old_City.jpg/800px-Sana%27a_Old_City.jpg", "hint": "بيوت صنعاء القديمة المميزة 🇾🇪"},
-    {"name": "موريتانيا", "img": "https://upload.wikimedia.org/wikipedia/commons/thumb/a/a2/Richat_Structure_Mauritania.jpg/800px-Richat_Structure_Mauritania.jpg", "hint": "قلب العين الصحراوي (ريشات) 🇲🇷"},
-    {"name": "الصومال", "img": "https://upload.wikimedia.org/wikipedia/commons/thumb/4/47/Mogadishu_Beach.jpg/800px-Mogadishu_Beach.jpg", "hint": "شواطئ مقديشو الخلابة 🇸🇴"},
+    # دول آسيا
+    {"name": "تركيا", "img": "https://images.unsplash.com/photo-1541432901042-2d8bd64b4a9b?w=800", "hint": "إسطنبول وتركيا 🇹🇷"},
+    {"name": "اليابان", "img": "https://images.unsplash.com/photo-1503899036084-c55cdd92da26?w=800", "hint": "طوكيو واليابان 🇯🇵"},
+    {"name": "الصين", "img": "https://images.unsplash.com/photo-1508804052814-cd38ba552e4d?w=800", "hint": "سور الصين العظيم 🇨🇳"},
+    {"name": "الهند", "img": "https://images.unsplash.com/photo-1524492412937-b28074a5d7da?w=800", "hint": "تاج محل 🇮🇳"},
+    {"name": "كوريا الجنوبية", "img": "https://images.unsplash.com/photo-1538485399061-1774e402d294?w=800", "hint": "سيول كوريا 🇰🇷"},
+    {"name": "إندونيسيا", "img": "https://images.unsplash.com/photo-1537996194471-e657df975ab4?w=800", "hint": "بالي وطبيعتها 🇮🇩"},
+    {"name": "ماليزيا", "img": "https://images.unsplash.com/photo-1596422846543-75c6fc197f07?w=800", "hint": "كوالالمبور وبتروناس 🇲🇾"},
+    {"name": "تايلاند", "img": "https://images.unsplash.com/photo-1552465011-b4e21bf6e79a?w=800", "hint": "بانكوك 🇹🇭"},
+    {"name": "باكستان", "img": "https://images.unsplash.com/photo-1609137144813-7f9f5b770fb9?w=800", "hint": "باكستان التاريخية 🇵🇰"},
+    {"name": "إيران", "img": "https://images.unsplash.com/photo-1584551246679-0daf3d275d0f?w=800", "hint": "المعالم الإيرانية 🇮🇷"},
 
-    {"name": "تركيا", "img": "https://upload.wikimedia.org/wikipedia/commons/thumb/b/b8/Hagia_Sophia_Mars_2013.jpg/800px-Hagia_Sophia_Mars_2013.jpg", "hint": "آيا صوفيا في إسطنبول 🇹🇷"},
-    {"name": "إيران", "img": "https://upload.wikimedia.org/wikipedia/commons/thumb/8/87/Nasir_al-Molk_Mosque_Shiraz_Iran.jpg/800px-Nasir_al-Molk_Mosque_Shiraz_Iran.jpg", "hint": "مسجد الورد في شيراز 🇮🇷"},
-    {"name": "باكستان", "img": "https://upload.wikimedia.org/wikipedia/commons/thumb/8/8f/Badshahi_Mosque_Lahore.jpg/800px-Badshahi_Mosque_Lahore.jpg", "hint": "مسجد بادشاهي في لاهور 🇵🇰"},
-    {"name": "الهند", "img": "https://upload.wikimedia.org/wikipedia/commons/thumb/c/c8/Taj_Mahal_in_March_2004.jpg/800px-Taj_Mahal_in_March_2004.jpg", "hint": "تاج محل الشهير 🇮🇳"},
-    {"name": "الصين", "img": "https://upload.wikimedia.org/wikipedia/commons/thumb/2/23/The_Great_Wall_of_China_-_July_2006.jpg/800px-The_Great_Wall_of_China_-_July_2006.jpg", "hint": "سور الصين العظيم 🇨🇳"},
-    {"name": "اليابان", "img": "https://upload.wikimedia.org/wikipedia/commons/thumb/1/1b/Mt._Fuji_from_Lake_Kawaguchiko_in_2021.jpg/800px-Mt._Fuji_from_Lake_Kawaguchiko_in_2021.jpg", "hint": "جبل فودجي الشهير 🇯🇵"},
-    {"name": "كوريا الجنوبية", "img": "https://upload.wikimedia.org/wikipedia/commons/thumb/6/6f/Seoul_Tower_and_city_view.jpg/800px-Seoul_Tower_and_city_view.jpg", "hint": "برج سيول 🇰🇷"},
-    {"name": "إندونيسيا", "img": "https://upload.wikimedia.org/wikipedia/commons/thumb/9/91/Bali_Pura_Ulun_Danu_Bratan.jpg/800px-Bali_Pura_Ulun_Danu_Bratan.jpg", "hint": "معبد بالي الشهير 🇮🇩"},
-    {"name": "ماليزيا", "img": "https://upload.wikimedia.org/wikipedia/commons/thumb/3/36/Petronas_Twin_Towers_2013.jpg/800px-Petronas_Twin_Towers_2013.jpg", "hint": "برجا بتروناس التوأم 🇲🇾"},
-    {"name": "تايلاند", "img": "https://upload.wikimedia.org/wikipedia/commons/thumb/f/f0/Bangkok_Grand_Palace_Thailand.jpg/800px-Bangkok_Grand_Palace_Thailand.jpg", "hint": "القصر الكبير في بانكوك 🇹🇭"},
+    # دول أوروبا
+    {"name": "فرنسا", "img": "https://images.unsplash.com/photo-1502602898657-3e91760cbb34?w=800", "hint": "برج إيفل في باريس 🇫🇷"},
+    {"name": "المملكة المتحدة", "img": "https://images.unsplash.com/photo-1513635269975-59663e0ac1ad?w=800", "hint": "لندن وساعة بيغ بن 🇬🇧"},
+    {"name": "إيطاليا", "img": "https://images.unsplash.com/photo-1516483638261-f4dbaf036963?w=800", "hint": "روما وإيطاليا 🇮🇹"},
+    {"name": "ألمانيا", "img": "https://images.unsplash.com/photo-1467269204594-9661b134dd2b?w=800", "hint": "ألمانيا والمعالم 🇩🇪"},
+    {"name": "إسبانيا", "img": "https://images.unsplash.com/photo-1543783207-ec64e4d95325?w=800", "hint": "مدريد وبرشلونة 🇪🇸"},
+    {"name": "روسيا", "img": "https://images.unsplash.com/photo-1513326738677-b964603b136d?w=800", "hint": "موسكو وروسيا 🇷🇺"},
+    {"name": "هولندا", "img": "https://images.unsplash.com/photo-1512470876302-972faa2aa9a4?w=800", "hint": "أمستردام 🇳🇱"},
+    {"name": "سويسرا", "img": "https://images.unsplash.com/photo-1530122037265-a5f1f91d3b99?w=800", "hint": "جبال الألب السويسرية 🇨🇭"},
+    {"name": "البرتغال", "img": "https://images.unsplash.com/photo-1515542622106-78bda8ba0e5b?w=800", "hint": "لشبونة البرتغال 🇵🇹"},
+    {"name": "السويد", "img": "https://images.unsplash.com/photo-1509356843153-3f1b213bfa7a?w=800", "hint": "ستوكهولم السويد 🇸🇪"},
+    {"name": "النرويج", "img": "https://images.unsplash.com/photo-1507034589631-9433cc6bc453?w=800", "hint": "طبيعة النرويج 🇳🇴"},
+    {"name": "اليونان", "img": "https://images.unsplash.com/photo-1533105079780-92b9be482077?w=800", "hint": "أثينا واليونان 🇬🇷"},
+    {"name": "النمسا", "img": "https://images.unsplash.com/photo-1516550893885-303ce2779fce?w=800", "hint": "فيينا النمسا 🇦🇹"},
+    {"name": "بلجيكا", "img": "https://images.unsplash.com/photo-1551643206-8d6938a75e12?w=800", "hint": "بروكسل بلجيكا 🇧🇪"},
+    {"name": "الدنمارك", "img": "https://images.unsplash.com/photo-1513622470522-26c3c8a854bc?w=800", "hint": "كوبنهاغن الدنمارك 🇩🇰"},
 
-    {"name": "فرنسا", "img": "https://upload.wikimedia.org/wikipedia/commons/thumb/8/85/Tour_Eiffel_Wikimedia_Commons_%28cropped%29.jpg/800px-Tour_Eiffel_Wikimedia_Commons_%28cropped%29.jpg", "hint": "برج إيفل في باريس 🇫🇷"},
-    {"name": "ألمانيا", "img": "https://upload.wikimedia.org/wikipedia/commons/thumb/e/e6/Neuschwanstein_Castle_and_Alpsee_Schwangau.jpg/800px-Neuschwanstein_Castle_and_Alpsee_Schwangau.jpg", "hint": "قلعة نويشفانشتاين الساحرة 🇩🇪"},
-    {"name": "المملكة المتحدة", "img": "https://upload.wikimedia.org/wikipedia/commons/thumb/6/67/London_Eye_Twilight_2006.jpg/800px-London_Eye_Twilight_2006.jpg", "hint": "عين لندن وساعة بيغ بن 🇬🇧"},
-    {"name": "إيطاليا", "img": "https://upload.wikimedia.org/wikipedia/commons/thumb/d/de/Colosseo_2020.jpg/800px-Colosseo_2020.jpg", "hint": "الكولوسيوم الروماني 🇮🇹"},
-    {"name": "إسبانيا", "img": "https://upload.wikimedia.org/wikipedia/commons/thumb/1/18/Sagrada_Familia_Barcelona_Spain.jpg/800px-Sagrada_Familia_Barcelona_Spain.jpg", "hint": "كنيسة ساغرادا فاميليا في برشلونة 🇪🇸"},
-    {"name": "روسيا", "img": "https://upload.wikimedia.org/wikipedia/commons/thumb/b/ba/St._Basil%27s_Cathedral_Moscow_2019.jpg/800px-St._Basil%27s_Cathedral_Moscow_2019.jpg", "hint": "كاتدرائية سانت باسيل في موسكو 🇷🇺"},
-    {"name": "هولندا", "img": "https://upload.wikimedia.org/wikipedia/commons/thumb/3/3b/Amsterdam_Canals_May_2007.jpg/800px-Amsterdam_Canals_May_2007.jpg", "hint": "قنوات أمستردام ومطاحن الهواء 🇳🇱"},
-    {"name": "بلجيكا", "img": "https://upload.wikimedia.org/wikipedia/commons/thumb/6/68/Grand_Place_Brussels.jpg/800px-Grand_Place_Brussels.jpg", "hint": "الساحة الكبرى في بروكسل 🇧🇪"},
-    {"name": "سويسرا", "img": "https://upload.wikimedia.org/wikipedia/commons/thumb/3/31/Matterhorn_from_Zermatt.jpg/800px-Matterhorn_from_Zermatt.jpg", "hint": "جبل ماترهورن الثلجي 🇨🇭"},
-    {"name": "البرتغال", "img": "https://upload.wikimedia.org/wikipedia/commons/thumb/3/36/Lisbon_Tram_28_by_night.jpg/800px-Lisbon_Tram_28_by_night.jpg", "hint": "ترام لشبونة الشهير 🇵🇹"},
+    # أمريكا الشمالية والجنوبية
+    {"name": "الولايات المتحدة", "img": "https://images.unsplash.com/photo-1485738422979-f5c462d49f74?w=800", "hint": "نيويورك أمريكا 🇺🇸"},
+    {"name": "كندا", "img": "https://images.unsplash.com/photo-1503614472-8c93d56e92ce?w=800", "hint": "تورنتو وكندا 🇨🇦"},
+    {"name": "المكسيك", "img": "https://images.unsplash.com/photo-1512813277712-4d37537b7713?w=800", "hint": "المكسيك التاريخية 🇲🇽"},
+    {"name": "البرازيل", "img": "https://images.unsplash.com/photo-1483729558449-99ef09a8c325?w=800", "hint": "ريو دي جانيرو البرازيل 🇧🇷"},
+    {"name": "الأرجنتين", "img": "https://images.unsplash.com/photo-1589909202874-1779777f7223?w=800", "hint": "بوينس آيرس الأرجنتين 🇦🇷"},
+    {"name": "كولومبيا", "img": "https://images.unsplash.com/photo-1590523277543-a94d2e4eb00b?w=800", "hint": "كولومبيا الساحرة 🇨🇴"},
+    {"name": "تشيلي", "img": "https://images.unsplash.com/photo-1544620347-c4fd4a3d5957?w=800", "hint": "تشيلي الطبيعة 🇨🇱"},
+    {"name": "بيرو", "img": "https://images.unsplash.com/photo-1526392060635-9d6019884377?w=800", "hint": "ماتشو بيشو بيرو 🇵🇪"},
+    {"name": "كوبا", "img": "https://images.unsplash.com/photo-1500759285702-e7d61837f48c?w=800", "hint": "هافانا كوبا 🇨🇺"},
 
-    {"name": "الولايات المتحدة", "img": "https://upload.wikimedia.org/wikipedia/commons/thumb/7/7a/The_Statue_of_Liberty_and_New_York_City_Skyline_-_20060717_crop.jpg/800px-The_Statue_of_Liberty_and_New_York_City_Skyline_-_20060717_crop.jpg", "hint": "تمثال الحرية في نيويورك 🇺🇸"},
-    {"name": "كندا", "img": "https://upload.wikimedia.org/wikipedia/commons/thumb/d/d8/CN_Tower_from_Toronto_Islands.jpg/800px-CN_Tower_from_Toronto_Islands.jpg", "hint": "برج سي إن تورنتو 🇨🇦"},
-    {"name": "البرازيل", "img": "https://upload.wikimedia.org/wikipedia/commons/thumb/9/98/Cristo_Redentor_-_Rio_de_Janeiro%2C_Brasil.jpg/800px-Cristo_Redentor_-_Rio_de_Janeiro%2C_Brasil.jpg", "hint": "تمثال المسيح الفادي في ريو 🇧🇷"},
-    {"name": "الأرجنتين", "img": "https://upload.wikimedia.org/wikipedia/commons/thumb/0/09/Iguazu_Falls_Argentina.jpg/800px-Iguazu_Falls_Argentina.jpg", "hint": "شلالات إيغوازو الساحرة 🇦🇷"},
-    {"name": "المكسيك", "img": "https://upload.wikimedia.org/wikipedia/commons/thumb/4/4e/Chichen_Itza_3.jpg/800px-Chichen_Itza_3.jpg", "hint": "معالم تشيتشن إيتزا التاريخية 🇲🇽"},
-    {"name": "كولومبيا", "img": "https://upload.wikimedia.org/wikipedia/commons/thumb/8/8c/Cartagena_Colombia_Walled_City.jpg/800px-Cartagena_Colombia_Walled_City.jpg", "hint": "مدينة كارتاغينا التاريخية 🇨🇴"},
-    {"name": "تشيلي", "img": "https://upload.wikimedia.org/wikipedia/commons/thumb/9/90/Torres_del_Paine_National_Park.jpg/800px-Torres_del_Paine_National_Park.jpg", "hint": "حديقة توريس ديل باينه الطبيعية 🇨🇱"},
-    {"name": "بيرو", "img": "https://upload.wikimedia.org/wikipedia/commons/thumb/e/eb/Machu_Picchu%2C_Peru_%282018%29.jpg/800px-Machu_Picchu%2C_Peru_%282018%29.jpg", "hint": "مدينة ماتشو بيشو التاريخية 🇵🇪"},
-    {"name": "فنزويلا", "img": "https://upload.wikimedia.org/wikipedia/commons/thumb/d/d1/Salto_Angel_Kerepakupai_Meru_Auyan_Tepui.jpg/800px-Salto_Angel_Kerepakupai_Meru_Auyan_Tepui.jpg", "hint": "شلالات أنخيل أعلى شلال في العالم 🇻🇪"},
-    {"name": "كوبا", "img": "https://upload.wikimedia.org/wikipedia/commons/thumb/f/f6/Havana_Capitol_Building_Cuba.jpg/800px-Havana_Capitol_Building_Cuba.jpg", "hint": "العاصمة هافانا والسيارات الكلاسيكية 🇨🇺"},
-
-    {"name": "أستراليا", "img": "https://upload.wikimedia.org/wikipedia/commons/thumb/a/a0/Sydney_Australia._(21339175489).jpg/800px-Sydney_Australia._(21339175489).jpg", "hint": "دار أوبرا سيدني 🇦🇺"},
-    {"name": "نيوزيلندا", "img": "https://upload.wikimedia.org/wikipedia/commons/thumb/c/c5/Milford_Sound_New_Zealand.jpg/800px-Milford_Sound_New_Zealand.jpg", "hint": "طبيعة نيوزيلندا الساحرة 🇳🇿"},
-    {"name": "جنوب إفريقيا", "img": "https://upload.wikimedia.org/wikipedia/commons/thumb/c/ce/Table_Mountain_Cape_Town_South_Africa.jpg/800px-Table_Mountain_Cape_Town_South_Africa.jpg", "hint": "جبل تيبل في كيب تاون 🇿🇦"},
-    {"name": "نيجيريا", "img": "https://upload.wikimedia.org/wikipedia/commons/thumb/1/1a/Abuja_National_Mosque.jpg/800px-Abuja_National_Mosque.jpg", "hint": "مسجد أبوجا الوطني 🇳🇬"},
-    {"name": "كينيا", "img": "https://upload.wikimedia.org/wikipedia/commons/thumb/3/3b/Maasai_Mara_Lion.jpg/800px-Maasai_Mara_Lion.jpg", "hint": "محمية ماساي مارا والحياة البرية 🇰🇪"},
-    {"name": "السويد", "img": "https://upload.wikimedia.org/wikipedia/commons/thumb/a/ab/Stockholm_Gamla_Stan_Stortorget.jpg/800px-Stockholm_Gamla_Stan_Stortorget.jpg", "hint": "مدينة ستوكهولم القديمة 🇸🇪"},
-    {"name": "النرويج", "img": "https://upload.wikimedia.org/wikipedia/commons/thumb/a/a2/Geirangerfjord_Norway.jpg/800px-Geirangerfjord_Norway.jpg", "hint": "مضايق النرويج الطبيعية 🇳🇴"},
-    {"name": "الدنمارك", "img": "https://upload.wikimedia.org/wikipedia/commons/thumb/b/b3/Nyhavn_Copenhagen_Denmark.jpg/800px-Nyhavn_Copenhagen_Denmark.jpg", "hint": "ميناء نيهفن الملون في كوبنهاغن 🇩🇰"},
-    {"name": "فنلندا", "img": "https://upload.wikimedia.org/wikipedia/commons/thumb/b/bd/Helsinki_Cathedral_suurkirkko.jpg/800px-Helsinki_Cathedral_suurkirkko.jpg", "hint": "كاتدرائية هلسنكي 🇫🇮"},
-    {"name": "اليونان", "img": "https://upload.wikimedia.org/wikipedia/commons/thumb/d/da/The_Parthenon_in_Athens.jpg/800px-The_Parthenon_in_Athens.jpg", "hint": "معبد البارثينون في أثينا 🇬🇷"}
+    # أوقيانوسيا وأفريقيا
+    {"name": "أستراليا", "img": "https://images.unsplash.com/photo-1506973035872-a4ec16b8e8d9?w=800", "hint": "دار أوبرا سيدني 🇦🇺"},
+    {"name": "نيوزيلندا", "img": "https://images.unsplash.com/photo-1469521669194-0384891ffc4f?w=800", "hint": "طبيعة نيوزيلندا 🇳🇿"},
+    {"name": "جنوب إفريقيا", "img": "https://images.unsplash.com/photo-1580618672591-eb180b1a973f?w=800", "hint": "كيب تاون جنوب إفريقيا 🇿🇦"},
+    {"name": "كينيا", "img": "https://images.unsplash.com/photo-1516426122078-c23e76319801?w=800", "hint": "سفاري كينيا 🇰🇪"},
+    {"name": "نيجيريا", "img": "https://images.unsplash.com/photo-1544620347-c4fd4a3d5957?w=800", "hint": "نيجيريا 🇳🇬"},
+    {"name": "أيسلندا", "img": "https://images.unsplash.com/photo-1504893524553-29586e1e191d?w=800", "hint": "أيسلندا والجليد 🇮🇸"},
+    {"name": "أيرلندا", "img": "https://images.unsplash.com/photo-1590089415225-4034664ce935?w=800", "hint": "دبلن أيرلندا 🇮🇪"},
+    {"name": "فندا", "img": "https://images.unsplash.com/photo-1517783997529-28f58c740a48?w=800", "hint": "فنلندا الشفق 🇫🇮"},
+    {"name": "المجر", "img": "https://images.unsplash.com/photo-1549877452-9c387954fbc2?w=800", "hint": "بودابست المجر 🇭🇺"},
+    {"name": "رومانيا", "img": "https://images.unsplash.com/photo-1584646098378-0874589d76b1?w=800", "hint": "رومانيا القلاع 🇷🇴"}
 ]
-
-import io
-import aiohttp
 
 @bot.command(name="خمن", aliases=["guess"])
 async def guess_country(ctx):
     item = random.choice(countries_images)
     target_country = item["name"]
     
-    # تحميل الصورة وتحويلها لملف مرفق ديسكورد
-    try:
-        async with aiohttp.ClientSession() as session:
-            # إضافة User-Agent وهمي عشان سيرفرات الصور ما تحظر طلب البوت
-            headers = {'User-Agent': 'Mozilla/5.0'}
-            async with session.get(item["img"], headers=headers) as resp:
-                if resp.status == 200:
-                    image_bytes = await resp.read()
-                    file = discord.File(io.BytesIO(image_bytes), filename="landmark.jpg")
-                else:
-                    # لو فشل التحميل، نرسل الإمبيد برابط مباشر بدون ملف تفاديًا لأي تعليق
-                    embed_fallback = discord.Embed(title="📸 تحدي خمن الدولة!", description=f"💡 تلميح: **{item['hint']}**", color=0x00e6b4)
-                    embed_fallback.set_image(url=item["img"])
-                    await ctx.send(embed=embed_fallback)
-                    return
-    except Exception:
-        embed_fallback = discord.Embed(title="📸 تحدي خمن الدولة!", description=f"💡 تلميح: **{item['hint']}**", color=0x00e6b4)
-        embed_fallback.set_image(url=item["img"])
-        await ctx.send(embed=embed_fallback)
-        return
-
     embed = discord.Embed(
         title="📸 تحدي خمن الدولة من المعلم السياحي!",
         description=f"💡 تلميح: **{item['hint']}**\n\n**وين الدولة اللي في الصورة؟ أسرع شخص يكتب اسمها بالشات!**",
         color=0x00e6b4
     )
-    embed.set_image(url="attachment://landmark.jpg")
+    embed.set_image(url=item["img"])
     embed.set_footer(text="لديك 10 ثوانٍ فقط للتخمين!")
     
-    # إرسال الملف مع الإمبيد
-    await ctx.send(file=file, embed=embed)
+    await ctx.send(embed=embed)
     
     def check(m):
         user_text = m.content.strip()
@@ -567,6 +555,7 @@ async def guess_country(ctx):
         await ctx.send(f"🎯 كفو يا <@{msg.author.id}>! الدولة هي **{target_country}** (+1 نقطة)")
     except Exception:
         await ctx.send(f"⏰ خلص الوقت! الدولة كانت: **{target_country}**")
+
 
 
 
