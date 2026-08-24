@@ -351,14 +351,50 @@ def run(): app.run(host='0.0.0.0', port=8080)
 # تشغيل الويب سيرفر في الخلفية
 Thread(target=run).start()
 
+import random
+import time
+import discord
+from discord.ext import commands
+
+# قاموس حفظ النقاط المشترك
 user_scores = {}
 
-@bot.command(name="نقاط", aliases=["top", "score"])
-async def show_score(ctx, member: discord.Member = None):
-    target = member or ctx.author
-    score = user_scores.get(target.id, 0)
-    await ctx.send(f"📊 نقاط اللاعب <@{target.id}> هي: **{score} نقطة** 🏆")
+# دالة إصلاح الحروف العربية المقلوبة
+def fix_arabic(text):
+    return text[::-1]
 
+# ----------------------------------------------------
+# 1. أمر النقاط (عرض نقاطك أو لوحة المتصدرين)
+# ----------------------------------------------------
+@bot.command(name="نقاط", aliases=["top", "score", "points"])
+async def show_score(ctx, member: discord.Member = None):
+    # لو فحصت لاعب معين
+    if member:
+        score = user_scores.get(member.id, 0)
+        await ctx.send(f"📊 نقاط اللاعب <@{member.id}> هي: **{score} نقطة** 🏆")
+        return
+
+    # لو ما حددت أحد، يعرض لوحة المتصدرين
+    if not user_scores:
+        await ctx.send("📉 ما فيه أي نقاط مسجلة لحد الحين!")
+        return
+    
+    sorted_scores = sorted(user_scores.items(), key=lambda x: x[1], reverse=True)
+    
+    desc = ""
+    for rank, (user_id, score) in enumerate(sorted_scores, 1):
+        desc += f"**#{rank}** <@{user_id}> ⟵ **{score}** نقطة\n"
+        
+    embed = discord.Embed(
+        title="🏆 لوحة متصدرين الألعاب",
+        description=desc,
+        color=0xffd700
+    )
+    await ctx.send(embed=embed)
+
+# ----------------------------------------------------
+# 2. لعبة السرعة (كلمات)
+# ----------------------------------------------------
 fast_words = [
     "صحن", "سيف", "سياره", "طياره", "كرسي", "بيت", "قلم", "دفتر", "باب", "شباك",
     "جوال", "ساعة", "طاولة", "ثلاجة", "مكيف", "سماعة", "مفاتيح", "قطار", "سفينة", "دراجة",
@@ -401,13 +437,9 @@ async def fast_game(ctx):
     except Exception:
         await ctx.send(f"⏳ انتهى الوقت! محد كتب الكلمة الصحيحة (`{target_word}`).")
 
-user_scores = {}
-
-# دالة ذكية لإصلاح انعكاس الحروف العربية تلقائياً
-def fix_arabic(text):
-    return text[::-1]
-
-# قائمة الـ 60 دولة كاملة
+# ----------------------------------------------------
+# 3. لعبة خمن الدولة
+# ----------------------------------------------------
 countries_images = [
     # 1 إلى 10
     {"name": "المملكة العربية السعودية", "img": "https://upload.wikimedia.org/wikipedia/commons/thumb/0/0d/Flag_of_Saudi_Arabia.svg/800px-Flag_of_Saudi_Arabia.svg.png", "hint": "علم السعودية 🇸🇦"},
@@ -452,7 +484,7 @@ countries_images = [
     {"name": "إيطاليا", "img": "https://upload.wikimedia.org/wikipedia/commons/thumb/0/03/Flag_of_Italy.svg/800px-Flag_of_Italy.svg.png", "hint": "علم إيطاليا 🇮🇹"},
     {"name": "إسبانيا", "img": "https://upload.wikimedia.org/wikipedia/commons/thumb/9/9a/Flag_of_Spain.svg/800px-Flag_of_Spain.svg.png", "hint": "علم إسبانيا 🇪🇸"},
     {"name": "روسيا", "img": "https://upload.wikimedia.org/wikipedia/commons/thumb/f/f3/Flag_of_Russia.svg/800px-Flag_of_Russia.svg.png", "hint": "علم روسيا 🇷🇺"},
-    {"name": "هولندا", "img": "https://upload.wikimedia.org/wikipedia/commons/thumb/2/20/Flag_of_the_Netherlands.svg/800px-Flag_of_the_Netherlands.svg.png", "hint": "علم هولندا 🇳🇱"},
+    {"name": "هولندا", "img": "https://upload.wikimedia.org/wikipedia/commons/thumb/2/20/Flag_of_the_Netherlands.svg/800px-Flag_of_Netherlands.svg.png", "hint": "علم هولندا 🇳🇱"},
     {"name": "بلجيكا", "img": "https://upload.wikimedia.org/wikipedia/commons/thumb/6/65/Flag_of_Belgium.svg/800px-Flag_of_Belgium.svg.png", "hint": "علم بلجيكا 🇧🇪"},
     {"name": "سويسرا", "img": "https://upload.wikimedia.org/wikipedia/commons/thumb/f/f3/Flag_of_Switzerland.svg/800px-Flag_of_Switzerland.svg.png", "hint": "علم سويسرا 🇨🇭"},
     {"name": "البرتغال", "img": "https://upload.wikimedia.org/wikipedia/commons/thumb/5/5c/Flag_of_Portugal.svg/800px-Flag_of_Portugal.svg.png", "hint": "علم البرتغال 🇵🇹"},
@@ -508,24 +540,6 @@ async def guess_country(ctx):
     except Exception:
         await ctx.send(f"⏰ خلص الوقت! الدولة كانت: **{target_country}**")
 
-@bot.command(name="نقاط", aliases=["score", "points"])
-async def show_score(ctx):
-    if not user_scores:
-        await ctx.send("📉 ما فيه أي نقاط مسجلة لحد الحين!")
-        return
-    
-    sorted_scores = sorted(user_scores.items(), key=lambda x: x[1], reverse=True)
-    
-    desc = ""
-    for rank, (user_id, score) in enumerate(sorted_scores, 1):
-        desc += f"**#{rank}** <@{user_id}> ⟵ **{score}** نقطة\n"
-        
-    embed = discord.Embed(
-        title="🏆 لوحة متصدرين الألعاب",
-        description=desc,
-        color=0xffd700
-    )
-    await ctx.send(embed=embed)
 
 
 # تشغيل البوت
