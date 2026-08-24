@@ -519,25 +519,17 @@ async def guess_country(ctx):
     item = random.choice(countries_images)
     target_country = item["name"]
     
-    # تحميل الصورة وتحويلها إلى ملف يقدر ديسكورد يرفعه مباشرة
-    async with aiohttp.ClientSession() as session:
-        async with session.get(item["img"]) as resp:
-            if resp.status == 200:
-                image_bytes = await resp.read()
-                # إنشاء ملف ديسكورد من البايتس
-                file = discord.File(io.BytesIO(image_bytes), filename="flag.png")
-            else:
-                await ctx.send("❌ صار خطأ في تحميل صورة العلم!")
-                return
-
-    embed = discord.Embed(title="📸 تحدي خمن الدولة!", color=0x00e6b4)
-    # ربط الإمبيد بالصورة المرفقة مباشرة داخل الشات
-    embed.set_image(url="attachment://flag.png")
-    embed.add_field(name="💡 تلميح:", value=item['hint'], inline=False)
-    embed.set_footer(text="أسرع شخص يكتب اسم الدولة بالشات! لديك 10 ثوانٍ فقط.")
+    embed = discord.Embed(
+        title="📸 تحدي خمن الدولة!",
+        description=f"💡 تلميح: {item['hint']}\n\n**أسرع شخص يكتب اسم الدولة بالشات!**",
+        color=0x00e6b4
+    )
+    # استخدام رابط الصورة مباشرة في الإمبيد بدون تحميل
+    embed.set_image(url=item["img"])
+    embed.set_footer(text="لديك 10 ثوانٍ فقط للتخمين!")
     
-    # إرسال الصورة كملف مرفق مع الإمبيد
-    await ctx.send(file=file, embed=embed)
+    # نرسل الإمبيد مباشرة (ديسكورد نفسه سيعرض الصورة تلقائياً بدون مشاكل)
+    await ctx.send(embed=embed)
     
     def check(m):
         user_text = m.content.strip()
@@ -549,6 +541,7 @@ async def guess_country(ctx):
         await ctx.send(f"🎯 كفو يا <@{msg.author.id}>! الدولة هي **{target_country}** (+1 نقطة)")
     except Exception:
         await ctx.send(f"⏰ خلص الوقت! الدولة كانت: **{target_country}**")
+
 
 
 
