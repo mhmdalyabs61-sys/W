@@ -351,6 +351,7 @@ def run(): app.run(host='0.0.0.0', port=8080)
 # تشغيل الويب سيرفر في الخلفية
 Thread(target=run).start()
 
+
 import random
 import time
 import discord
@@ -555,7 +556,6 @@ async def guess_country(ctx):
         await ctx.send(f"🎯 كفو يا <@{msg.author.id}>! الدولة هي **{target_country}** (+1 نقطة)")
     except Exception:
         await ctx.send(f"⏰ خلص الوقت! الدولة كانت: **{target_country}**")
-
 
 
 
