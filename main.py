@@ -401,50 +401,132 @@ async def fast_game(ctx):
     except Exception:
         await ctx.send(f"⏳ انتهى الوقت! محد كتب الكلمة الصحيحة (`{target_word}`).")
 
-countries_list = [
-    "المملكة العربية السعودية", "الإمارات", "مصر", "الكويت", "قطر", "البحرين", 
-    "عمان", "الأردن", "لبنان", "العراق", "سوريا", "فلسطين", "المغرب", 
-    "الجزائر", "تونس", "ليبيا", "السودان", "اليمن", "الصومال", "جيبوتي", 
-    "موريتانيا", "تركيا", "إيران", "باكستان", "الهند", "الصين", "اليابان", 
-    "كوريا الجنوبية", "إندونيسيا", "ماليزيا", "تايلاند", "فيتنام", "روسيا", 
-    "ألمانيا", "فرنسا", "إيطاليا", "إسبانيا", "المملكة المتحدة", "البرتغال", 
-    "هولندا", "بلجيكا", "سويسرا", "النمسا", "اليونان", "السويد", "النرويج", 
-    "الدنمارك", "فنلندا", "بولندا", "أوكرانيا", "الولايات المتحدة", "كندا", 
-    "المكسيك", "البرازيل", "الأرجنتين", "كولومبيا", "تشيلي", "أستراليا", 
-    "نيوزيلندا", "جنوب أفريقيا"
+user_scores = {}
+
+# دالة ذكية لإصلاح انعكاس الحروف العربية تلقائياً
+def fix_arabic(text):
+    return text[::-1]
+
+# قائمة الـ 60 دولة كاملة
+countries_images = [
+    # 1 إلى 10
+    {"name": "المملكة العربية السعودية", "img": "https://upload.wikimedia.org/wikipedia/commons/thumb/0/0d/Flag_of_Saudi_Arabia.svg/800px-Flag_of_Saudi_Arabia.svg.png", "hint": "علم السعودية 🇸🇦"},
+    {"name": "مصر", "img": "https://upload.wikimedia.org/wikipedia/commons/thumb/f/fe/Flag_of_Egypt.svg/800px-Flag_of_Egypt.svg.png", "hint": "علم مصر 🇪🇬"},
+    {"name": "الإمارات", "img": "https://upload.wikimedia.org/wikipedia/commons/thumb/c/cb/Flag_of_the_United_Arab_Emirates.svg/800px-Flag_of_the_United_Arab_Emirates.svg.png", "hint": "علم الإمارات 🇦🇪"},
+    {"name": "الكويت", "img": "https://upload.wikimedia.org/wikipedia/commons/thumb/a/aa/Flag_of_Kuwait.svg/800px-Flag_of_Kuwait.svg.png", "hint": "علم الكويت 🇰🇼"},
+    {"name": "قطر", "img": "https://upload.wikimedia.org/wikipedia/commons/thumb/6/65/Flag_of_Qatar.svg/800px-Flag_of_Qatar.svg.png", "hint": "علم قطر 🇶🇦"},
+    {"name": "البحرين", "img": "https://upload.wikimedia.org/wikipedia/commons/thumb/2/2c/Flag_of_Bahrain.svg/800px-Flag_of_Bahrain.svg.png", "hint": "علم البحرين 🇧🇭"},
+    {"name": "عمان", "img": "https://upload.wikimedia.org/wikipedia/commons/thumb/d/dd/Flag_of_Oman.svg/800px-Flag_of_Oman.svg.png", "hint": "علم سلطنة عمان 🇴🇲"},
+    {"name": "الأردن", "img": "https://upload.wikimedia.org/wikipedia/commons/thumb/c/c0/Flag_of_Jordan.svg/800px-Flag_of_Jordan.svg.png", "hint": "علم الأردن 🇯🇴"},
+    {"name": "العراق", "img": "https://upload.wikimedia.org/wikipedia/commons/thumb/f/f6/Flag_of_Iraq.svg/800px-Flag_of_Iraq.svg.png", "hint": "علم العراق 🇮🇶"},
+    {"name": "سوريا", "img": "https://upload.wikimedia.org/wikipedia/commons/thumb/5/53/Flag_of_Syria.svg/800px-Flag_of_Syria.svg.png", "hint": "علم سوريا 🇸🇾"},
+
+    # 11 إلى 20
+    {"name": "لبنان", "img": "https://upload.wikimedia.org/wikipedia/commons/thumb/5/59/Flag_of_Lebanon.svg/800px-Flag_of_Lebanon.svg.png", "hint": "علم لبنان 🇱🇧"},
+    {"name": "فلسطين", "img": "https://upload.wikimedia.org/wikipedia/commons/thumb/0/00/Flag_of_Palestine.svg/800px-Flag_of_Palestine.svg.png", "hint": "علم فلسطين 🇵🇸"},
+    {"name": "المغرب", "img": "https://upload.wikimedia.org/wikipedia/commons/thumb/2/2c/Flag_of_Morocco.svg/800px-Flag_of_Morocco.svg.png", "hint": "علم المغرب 🇲🇦"},
+    {"name": "الجزائر", "img": "https://upload.wikimedia.org/wikipedia/commons/thumb/7/77/Flag_of_Algeria.svg/800px-Flag_of_Algeria.svg.png", "hint": "علم الجزائر 🇩🇿"},
+    {"name": "تونس", "img": "https://upload.wikimedia.org/wikipedia/commons/thumb/c/ce/Flag_of_Tunisia.svg/800px-Flag_of_Tunisia.svg.png", "hint": "علم تونس 🇹🇳"},
+    {"name": "ليبيا", "img": "https://upload.wikimedia.org/wikipedia/commons/thumb/0/05/Flag_of_Libya.svg/800px-Flag_of_Libya.svg.png", "hint": "علم ليبيا 🇱🇾"},
+    {"name": "السودان", "img": "https://upload.wikimedia.org/wikipedia/commons/thumb/0/01/Flag_of_Sudan.svg/800px-Flag_of_Sudan.svg.png", "hint": "علم السودان 🇸🇩"},
+    {"name": "اليمن", "img": "https://upload.wikimedia.org/wikipedia/commons/thumb/8/89/Flag_of_Yemen.svg/800px-Flag_of_Yemen.svg.png", "hint": "علم اليمن 🇾🇪"},
+    {"name": "موريتانيا", "img": "https://upload.wikimedia.org/wikipedia/commons/thumb/4/43/Flag_of_Mauritania.svg/800px-Flag_of_Mauritania.svg.png", "hint": "علم موريتانيا 🇲🇷"},
+    {"name": "الصومال", "img": "https://upload.wikimedia.org/wikipedia/commons/thumb/a/a0/Flag_of_Somalia.svg/800px-Flag_of_Somalia.svg.png", "hint": "علم الصومال 🇸🇴"},
+
+    # 21 إلى 30
+    {"name": "تركيا", "img": "https://upload.wikimedia.org/wikipedia/commons/thumb/b/b4/Flag_of_Turkey.svg/800px-Flag_of_Turkey.svg.png", "hint": "علم تركيا 🇹🇷"},
+    {"name": "إيران", "img": "https://upload.wikimedia.org/wikipedia/commons/thumb/c/ca/Flag_of_Iran.svg/800px-Flag_of_Iran.svg.png", "hint": "علم إيران 🇮🇷"},
+    {"name": "باكستان", "img": "https://upload.wikimedia.org/wikipedia/commons/thumb/3/32/Flag_of_Pakistan.svg/800px-Flag_of_Pakistan.svg.png", "hint": "علم باكستان 🇵🇰"},
+    {"name": "الهند", "img": "https://upload.wikimedia.org/wikipedia/commons/thumb/4/41/Flag_of_India.svg/800px-Flag_of_India.svg.png", "hint": "علم الهند 🇮🇳"},
+    {"name": "الصين", "img": "https://upload.wikimedia.org/wikipedia/commons/thumb/f/fa/Flag_of_the_People%27s_Republic_of_China.svg/800px-Flag_of_the_People%27s_Republic_of_China.svg.png", "hint": "علم الصين 🇨🇳"},
+    {"name": "اليابان", "img": "https://upload.wikimedia.org/wikipedia/commons/thumb/9/9e/Flag_of_Japan.svg/800px-Flag_of_Japan.svg.png", "hint": "علم اليابان 🇯🇵"},
+    {"name": "كوريا الجنوبية", "img": "https://upload.wikimedia.org/wikipedia/commons/thumb/0/09/Flag_of_South_Korea.svg/800px-Flag_of_South_Korea.svg.png", "hint": "علم كوريا الجنوبية 🇰🇷"},
+    {"name": "إندونيسيا", "img": "https://upload.wikimedia.org/wikipedia/commons/thumb/9/9f/Flag_of_Indonesia.svg/800px-Flag_of_Indonesia.svg.png", "hint": "علم إندونيسيا 🇮🇩"},
+    {"name": "ماليزيا", "img": "https://upload.wikimedia.org/wikipedia/commons/thumb/6/66/Flag_of_Malaysia.svg/800px-Flag_of_Malaysia.svg.png", "hint": "علم ماليزيا 🇲🇾"},
+    {"name": "تايلاند", "img": "https://upload.wikimedia.org/wikipedia/commons/thumb/a/a9/Flag_of_Thailand.svg/800px-Flag_of_Thailand.svg.png", "hint": "علم تايلاند 🇹🇭"},
+
+    # 31 إلى 40
+    {"name": "فرنسا", "img": "https://upload.wikimedia.org/wikipedia/commons/thumb/c/c3/Flag_of_France.svg/800px-Flag_of_France.svg.png", "hint": "علم فرنسا 🇫🇷"},
+    {"name": "ألمانيا", "img": "https://upload.wikimedia.org/wikipedia/commons/thumb/b/ba/Flag_of_Germany.svg/800px-Flag_of_Germany.svg.png", "hint": "علم ألمانيا 🇩🇪"},
+    {"name": "المملكة المتحدة", "img": "https://upload.wikimedia.org/wikipedia/commons/thumb/a/ae/Flag_of_the_United_Kingdom.svg/800px-Flag_of_United_Kingdom.svg.png", "hint": "علم بريطانيا 🇬🇧"},
+    {"name": "إيطاليا", "img": "https://upload.wikimedia.org/wikipedia/commons/thumb/0/03/Flag_of_Italy.svg/800px-Flag_of_Italy.svg.png", "hint": "علم إيطاليا 🇮🇹"},
+    {"name": "إسبانيا", "img": "https://upload.wikimedia.org/wikipedia/commons/thumb/9/9a/Flag_of_Spain.svg/800px-Flag_of_Spain.svg.png", "hint": "علم إسبانيا 🇪🇸"},
+    {"name": "روسيا", "img": "https://upload.wikimedia.org/wikipedia/commons/thumb/f/f3/Flag_of_Russia.svg/800px-Flag_of_Russia.svg.png", "hint": "علم روسيا 🇷🇺"},
+    {"name": "هولندا", "img": "https://upload.wikimedia.org/wikipedia/commons/thumb/2/20/Flag_of_the_Netherlands.svg/800px-Flag_of_the_Netherlands.svg.png", "hint": "علم هولندا 🇳🇱"},
+    {"name": "بلجيكا", "img": "https://upload.wikimedia.org/wikipedia/commons/thumb/6/65/Flag_of_Belgium.svg/800px-Flag_of_Belgium.svg.png", "hint": "علم بلجيكا 🇧🇪"},
+    {"name": "سويسرا", "img": "https://upload.wikimedia.org/wikipedia/commons/thumb/f/f3/Flag_of_Switzerland.svg/800px-Flag_of_Switzerland.svg.png", "hint": "علم سويسرا 🇨🇭"},
+    {"name": "البرتغال", "img": "https://upload.wikimedia.org/wikipedia/commons/thumb/5/5c/Flag_of_Portugal.svg/800px-Flag_of_Portugal.svg.png", "hint": "علم البرتغال 🇵🇹"},
+
+    # 41 إلى 50
+    {"name": "الولايات المتحدة", "img": "https://upload.wikimedia.org/wikipedia/commons/thumb/a/a4/Flag_of_the_United_States.svg/800px-Flag_of_United_States.svg.png", "hint": "علم أمريكا 🇺🇸"},
+    {"name": "كندا", "img": "https://upload.wikimedia.org/wikipedia/commons/thumb/c/cf/Flag_of_Canada.svg/800px-Flag_of_Canada.svg.png", "hint": "علم كندا 🇨🇦"},
+    {"name": "البرازيل", "img": "https://upload.wikimedia.org/wikipedia/commons/thumb/0/05/Flag_of_Brazil.svg/800px-Flag_of_Brazil.svg.png", "hint": "علم البرازيل 🇧🇷"},
+    {"name": "الأرجنتين", "img": "https://upload.wikimedia.org/wikipedia/commons/thumb/1/1a/Flag_of_Argentina.svg/800px-Flag_of_Argentina.svg.png", "hint": "علم الأرجنتين 🇦🇷"},
+    {"name": "المكسيك", "img": "https://upload.wikimedia.org/wikipedia/commons/thumb/f/fc/Flag_of_Mexico.svg/800px-Flag_of_Mexico.svg.png", "hint": "علم المكسيك 🇲🇽"},
+    {"name": "كولومبيا", "img": "https://upload.wikimedia.org/wikipedia/commons/thumb/2/21/Flag_of_Colombia.svg/800px-Flag_of_Colombia.svg.png", "hint": "علم كولومبيا 🇨🇴"},
+    {"name": "تشيلي", "img": "https://upload.wikimedia.org/wikipedia/commons/thumb/7/78/Flag_of_Chile.svg/800px-Flag_of_Chile.svg.png", "hint": "علم تشيلي 🇨🇱"},
+    {"name": "بيرو", "img": "https://upload.wikimedia.org/wikipedia/commons/thumb/c/cf/Flag_of_Peru.svg/800px-Flag_of_Peru.svg.png", "hint": "علم بيرو 🇵🇪"},
+    {"name": "فنزويلا", "img": "https://upload.wikimedia.org/wikipedia/commons/thumb/0/06/Flag_of_Venezuela.svg/800px-Flag_of_Venezuela.svg.png", "hint": "علم فنزويلا 🇻🇪"},
+    {"name": "كوبا", "img": "https://upload.wikimedia.org/wikipedia/commons/thumb/b/bd/Flag_of_Cuba.svg/800px-Flag_of_Cuba.svg.png", "hint": "علم كوبا 🇨🇺"},
+
+    # 51 إلى 60
+    {"name": "أستراليا", "img": "https://upload.wikimedia.org/wikipedia/commons/thumb/b/b9/Flag_of_Australia.svg/800px-Flag_of_Australia.svg.png", "hint": "علم أستراليا 🇦🇺"},
+    {"name": "نيوزيلندا", "img": "https://upload.wikimedia.org/wikipedia/commons/thumb/3/3e/Flag_of_New_Zealand.svg/800px-Flag_of_New_Zealand.svg.png", "hint": "علم نيوزيلندا 🇳🇿"},
+    {"name": "جنوب إفريقيا", "img": "https://upload.wikimedia.org/wikipedia/commons/thumb/a/af/Flag_of_South_Africa.svg/800px-Flag_of_South_Africa.svg.png", "hint": "علم جنوب إفريقيا 🇿🇦"},
+    {"name": "نيجيريا", "img": "https://upload.wikimedia.org/wikipedia/commons/thumb/7/79/Flag_of_Nigeria.svg/800px-Flag_of_Nigeria.svg.png", "hint": "علم نيجيريا 🇳🇬"},
+    {"name": "كينيا", "img": "https://upload.wikimedia.org/wikipedia/commons/thumb/4/49/Flag_of_Kenya.svg/800px-Flag_of_Kenya.svg.png", "hint": "علم كينيا 🇰🇪"},
+    {"name": "السويد", "img": "https://upload.wikimedia.org/wikipedia/commons/thumb/4/4c/Flag_of_Sweden.svg/800px-Flag_of_Sweden.svg.png", "hint": "علم السويد 🇸🇪"},
+    {"name": "النرويج", "img": "https://upload.wikimedia.org/wikipedia/commons/thumb/d/d9/Flag_of_Norway.svg/800px-Flag_of_Norway.svg.png", "hint": "علم النرويج 🇳🇴"},
+    {"name": "الدنمارك", "img": "https://upload.wikimedia.org/wikipedia/commons/thumb/9/9c/Flag_of_Denmark.svg/800px-Flag_of_Denmark.svg.png", "hint": "علم الدنمارك 🇩🇰"},
+    {"name": "فنلندا", "img": "https://upload.wikimedia.org/wikipedia/commons/thumb/b/bc/Flag_of_Finland.svg/800px-Flag_of_Finland.svg.png", "hint": "علم فنلندا 🇫🇮"},
+    {"name": "اليونان", "img": "https://upload.wikimedia.org/wikipedia/commons/thumb/5/5c/Flag_of_Greece.svg/800px-Flag_of_Greece.svg.png", "hint": "علم اليونان 🇬🇷"}
 ]
 
 @bot.command(name="خمن", aliases=["guess"])
 async def guess_country(ctx):
-    target_country = random.choice(countries_list)
+    item = random.choice(countries_images)
+    target_country = item["name"]
     
     embed = discord.Embed(
-        title="🌍 لعبة خمن الدولة",
-        description="البوت اختار دولة عشوائية، اكتب اسمها الصحيح بالشات!",
+        title="📸 تحدي خمن الدولة (الوضع السريع)!",
+        description=f"💡 تلميح: {item['hint']}\nأسرع شخص يكتب اسم الدولة بالشات!",
         color=0x00e6b4
     )
-    embed.add_field(name="💡 تلميح", value=f"عدد حروف الدولة: **{len(target_country)}** حروف", inline=False)
-    embed.set_footer(text="لديك 20 ثانية للتخمين!")
+    embed.set_image(url=item["img"])
+    embed.set_footer(text="لديك 10 ثوانٍ فقط للتخمين!")
     
     await ctx.send(embed=embed)
     
     def check(m):
-        return m.channel == ctx.channel and m.content.strip() == target_country and not m.author.bot
+        user_text = m.content.strip()
+        return m.channel == ctx.channel and (user_text == target_country or user_text == fix_arabic(target_country)) and not m.author.bot
 
     try:
-        msg = await bot.wait_for('message', timeout=20.0, check=check)
+        msg = await bot.wait_for('message', timeout=10.0, check=check)
         user_scores[msg.author.id] = user_scores.get(msg.author.id, 0) + 1
-        await ctx.send(f"🎯 إجابة صحيحة يا <@{msg.author.id}>! الدولة هي **{target_country}** (+1 نقطة)")
+        await ctx.send(f"🎯 كفو يا <@{msg.author.id}>! الدولة هي **{target_country}** (+1 نقطة)")
     except Exception:
-        await ctx.send(f"⏰ انتهى الوقت! الدولة الصحيحة كانت: **{target_country}**")
+        await ctx.send(f"⏰ خلص الوقت! الدولة كانت: **{target_country}**")
 
-@bot.command(name="ألعاب", aliases=["help_games"])
-async def games_help(ctx):
-    embed = discord.Embed(title="🎮 قائمة ألعاب البوت", color=0x00ffcc)
-    embed.add_field(name="`!اسرع`", value="لعبة سرعة الكتابة بكلمات عشوائية.", inline=False)
-    embed.add_field(name="`!خمن`", value="لعبة تخمين أسماء الدول.", inline=False)
-    embed.add_field(name="`!نقاط`", value="عرض رصيدك والنقاط.", inline=False)
+@bot.command(name="نقاط", aliases=["score", "points"])
+async def show_score(ctx):
+    if not user_scores:
+        await ctx.send("📉 ما فيه أي نقاط مسجلة لحد الحين!")
+        return
+    
+    sorted_scores = sorted(user_scores.items(), key=lambda x: x[1], reverse=True)
+    
+    desc = ""
+    for rank, (user_id, score) in enumerate(sorted_scores, 1):
+        desc += f"**#{rank}** <@{user_id}> ⟵ **{score}** نقطة\n"
+        
+    embed = discord.Embed(
+        title="🏆 لوحة متصدرين الألعاب",
+        description=desc,
+        color=0xffd700
+    )
     await ctx.send(embed=embed)
+
 
 # تشغيل البوت
 import os
