@@ -517,22 +517,45 @@ countries_images = [
     {"name": "اليونان", "img": "https://upload.wikimedia.org/wikipedia/commons/thumb/d/da/The_Parthenon_in_Athens.jpg/800px-The_Parthenon_in_Athens.jpg", "hint": "معبد البارثينون في أثينا 🇬🇷"}
 ]
 
+import io
+import aiohttp
+
 @bot.command(name="خمن", aliases=["guess"])
 async def guess_country(ctx):
     item = random.choice(countries_images)
     target_country = item["name"]
     
+    # تحميل الصورة وتحويلها لملف مرفق ديسكورد
+    try:
+        async with aiohttp.ClientSession() as session:
+            # إضافة User-Agent وهمي عشان سيرفرات الصور ما تحظر طلب البوت
+            headers = {'User-Agent': 'Mozilla/5.0'}
+            async with session.get(item["img"], headers=headers) as resp:
+                if resp.status == 200:
+                    image_bytes = await resp.read()
+                    file = discord.File(io.BytesIO(image_bytes), filename="landmark.jpg")
+                else:
+                    # لو فشل التحميل، نرسل الإمبيد برابط مباشر بدون ملف تفاديًا لأي تعليق
+                    embed_fallback = discord.Embed(title="📸 تحدي خمن الدولة!", description=f"💡 تلميح: **{item['hint']}**", color=0x00e6b4)
+                    embed_fallback.set_image(url=item["img"])
+                    await ctx.send(embed=embed_fallback)
+                    return
+    except Exception:
+        embed_fallback = discord.Embed(title="📸 تحدي خمن الدولة!", description=f"💡 تلميح: **{item['hint']}**", color=0x00e6b4)
+        embed_fallback.set_image(url=item["img"])
+        await ctx.send(embed=embed_fallback)
+        return
+
     embed = discord.Embed(
         title="📸 تحدي خمن الدولة من المعلم السياحي!",
-        description=f"💡 تلميح: {item['hint']}\n\n**وين الدولة اللي في الصورة؟ أسرع شخص يكتب اسمها بالشات!**",
+        description=f"💡 تلميح: **{item['hint']}**\n\n**وين الدولة اللي في الصورة؟ أسرع شخص يكتب اسمها بالشات!**",
         color=0x00e6b4
     )
-    # تعيين صورة المعلم السياحي داخل الإمبيد عشان البوت هو اللي يرسلها للتشات
-    embed.set_image(url=item["img"])
+    embed.set_image(url="attachment://landmark.jpg")
     embed.set_footer(text="لديك 10 ثوانٍ فقط للتخمين!")
     
-    # البوت بيرسل الإمبيد مع الصورة مباشرة داخل الشات
-    await ctx.send(embed=embed)
+    # إرسال الملف مع الإمبيد
+    await ctx.send(file=file, embed=embed)
     
     def check(m):
         user_text = m.content.strip()
@@ -544,6 +567,7 @@ async def guess_country(ctx):
         await ctx.send(f"🎯 كفو يا <@{msg.author.id}>! الدولة هي **{target_country}** (+1 نقطة)")
     except Exception:
         await ctx.send(f"⏰ خلص الوقت! الدولة كانت: **{target_country}**")
+
 
 
 
