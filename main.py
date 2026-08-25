@@ -47,8 +47,7 @@ def save_data(data):
         json.dump(data, f, indent=4, ensure_ascii=False)
 
 bot_data = load_data()
-intents = discord.Intents.all()
-bot = commands.Bot(command_prefix='!', intents=intents)
+
 
 # --- أنظمة الراديو (UI Components) ---
 
