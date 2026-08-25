@@ -412,8 +412,7 @@ async def fast_game(ctx):
 # 3. لعبة خمن الدولة (60 دولة - صورتين لكل دولة - بدون تلميح)
 # ----------------------------------------------------
 
-  countries_images = [
-    # الدول العربية
+countries_images = [
     {"name": "المملكة العربية السعودية", "img": "https://images.unsplash.com/photo-1586724237569-f3d029bf46e5?w=800"},
     {"name": "مصر", "img": "https://images.unsplash.com/photo-1572252009286-268acec5ca0a?w=800"},
     {"name": "الإمارات", "img": "https://images.unsplash.com/photo-1512453979798-5ea266f8880c?w=800"},
@@ -429,8 +428,6 @@ async def fast_game(ctx):
     {"name": "المغرب", "img": "https://images.unsplash.com/photo-1539650116574-8efeb43e2750?w=800"},
     {"name": "الجزائر", "img": "https://images.unsplash.com/photo-1577948334699-2a912bb14798?w=800"},
     {"name": "تونس", "img": "https://images.unsplash.com/photo-1515542622106-78bda8ba0e5b?w=800"},
-
-    # الدول الآسيوية
     {"name": "تركيا", "img": "https://images.unsplash.com/photo-1541432901042-2d8bd64b4a9b?w=800"},
     {"name": "اليابان", "img": "https://images.unsplash.com/photo-1503899036084-c55cdd92da26?w=800"},
     {"name": "الصين", "img": "https://images.unsplash.com/photo-1508804052814-cd38ba552e4d?w=800"},
@@ -441,8 +438,6 @@ async def fast_game(ctx):
     {"name": "تايلاند", "img": "https://images.unsplash.com/photo-1552465011-b4e21bf6e79a?w=800"},
     {"name": "باكستان", "img": "https://images.unsplash.com/photo-1609137144813-7f9f5b770fb9?w=800"},
     {"name": "إيران", "img": "https://images.unsplash.com/photo-1563492065599-3520f775eeed?w=800"},
-
-    # الدول الأوروبية
     {"name": "فرنسا", "img": "https://images.unsplash.com/photo-1502602898657-3e91760cbb34?w=800"},
     {"name": "المملكة المتحدة", "img": "https://images.unsplash.com/photo-1513635269975-59663e0ac1ad?w=800"},
     {"name": "إيطاليا", "img": "https://images.unsplash.com/photo-1516483638261-f4dbaf036963?w=800"},
@@ -458,8 +453,6 @@ async def fast_game(ctx):
     {"name": "النمسا", "img": "https://images.unsplash.com/photo-1516550893885-303ce2779fce?w=800"},
     {"name": "بلجيكا", "img": "https://images.unsplash.com/photo-1551643206-8d6938a75e12?w=800"},
     {"name": "الدنمارك", "img": "https://images.unsplash.com/photo-1513622470522-26c3c8a854bc?w=800"},
-
-    # دول أمريكا الشمالية والجنوبية
     {"name": "الولايات المتحدة", "img": "https://images.unsplash.com/photo-1485738422979-f5c462d49f74?w=800"},
     {"name": "كندا", "img": "https://images.unsplash.com/photo-1503614472-8c93d56e92ce?w=800"},
     {"name": "المكسيك", "img": "https://images.unsplash.com/photo-1512813277712-4d37537b7713?w=800"},
@@ -469,8 +462,6 @@ async def fast_game(ctx):
     {"name": "تشيلي", "img": "https://images.unsplash.com/photo-1564507592333-c60657eea523?w=800"},
     {"name": "بيرو", "img": "https://images.unsplash.com/photo-1526392060635-9d6019884377?w=800"},
     {"name": "كوبا", "img": "https://images.unsplash.com/photo-1500759285702-e7d61837f48c?w=800"},
-
-    # دول أستراليا وإفريقيا وباقي القارات
     {"name": "أستراليا", "img": "https://images.unsplash.com/photo-1506973035872-a4ec16b8e8d9?w=800"},
     {"name": "نيوزيلندا", "img": "https://images.unsplash.com/photo-1469521669194-0384891ffc4f?w=800"},
     {"name": "جنوب إفريقيا", "img": "https://images.unsplash.com/photo-1516426122078-c23e76319801?w=800"},
@@ -483,6 +474,7 @@ async def fast_game(ctx):
     {"name": "رومانيا", "img": "https://images.unsplash.com/photo-1584646098378-0874589d76b1?w=800"},
     {"name": "بولندا", "img": "https://images.unsplash.com/photo-1519138119067-6b4c3c299a1e?w=800"}
 ]
+
 
 @bot.command(name="خمن", aliases=["guess"])
 async def guess_country(ctx):
