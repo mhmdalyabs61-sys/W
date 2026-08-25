@@ -1,9 +1,17 @@
 import discord, json, os, asyncio, random, time, io
 from discord.ext import commands
 from discord import app_commands
-from datetime import timedelta, datetime
+from datetime import datetime, timedelta
 from typing import Union, Optional, List, Dict
 from PIL import Image, ImageDraw
+
+# إعدادات البوت والـ Intents الأساسية (مفعل فيها الـ members بصراحة عشان يشتغل الترحيب)
+intents = discord.Intents.default()
+intents.message_content = True
+intents.members = True  # <--- هذا السطر الأساسي والمهم جداً
+
+bot = commands.Bot(command_prefix="!", intents=intents)
+
 
 
 # ══════════════════════════════════════════════════════════════
