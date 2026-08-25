@@ -608,6 +608,33 @@ async def guess_country(ctx):
 
 
 
+@bot.event
+async def on_member_join(member):
+    channel_id = 1541617463349743747
+    channel = bot.get_channel(channel_id)
+    
+    if channel:
+        member_count = member.guild.member_count
+        
+        # إنشاء الـ Embed باللون الأسود
+        embed = discord.Embed(
+            title="👋 عضو جديد منورنا!",
+            description=(
+                f"ارحب تراحيب المطررر\n"
+                f"{member.mention}\n\n"
+                f"بفضلك صرنا \n"
+                f"**{member_count}** عضو!\n\n"
+                f"لا تنسى تشيك على <#1540853992870121612>\n\n"
+                f"نتمنى انك مو من المتجحفلين"
+            ),
+            color=0x010101  # لون أسود داكن وأنيق
+        )
+        
+        # إضافة صورة مصغرة لصورة بروفايل العضو الجديد
+        embed.set_thumbnail(url=member.display_avatar.url)
+        
+        # إرسال الإمبيد في الروم
+        await channel.send(embed=embed)
 
 
 
