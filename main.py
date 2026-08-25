@@ -121,63 +121,7 @@ async def queue_task(target_id, coro):
         await asyncio.sleep(5)
         event_history.pop(target_id, None)
 
-# --- الحماية الشاملة ---
 
-@bot.event
-async def on_guild_channel_delete(channel):
-    if not bot_data['protection'].get('channel_del', True) or event_history.get(channel.id): return
-    event_history[channel.id] = True
-    
-    # محاولة استعادة القناة
-    try:
-        if isinstance(channel, discord.VoiceChannel):
-            new_ch = await channel.guild.create_voice_channel(name=channel.name, category=channel.category, position=channel.position, overwrites=channel.overwrites)
-        else:
-            new_ch = await channel.guild.create_text_channel(name=channel.name, category=channel.category, position=channel.position, overwrites=channel.overwrites)
-        
-        asyncio.create_task(queue_task(new_ch.id, asyncio.sleep(0))) # تسجيله في القفل
-    except Exception as e:
-        print(f"Error restoring channel: {e}")
-        event_history.pop(channel.id, None)
-
-@bot.event
-async def on_guild_channel_create(channel):
-    if event_history.get(channel.id) or not bot_data['protection'].get('channel_create', True): return
-    
-    await asyncio.sleep(1) # انتظار تحديث السجل
-    async for entry in channel.guild.audit_logs(limit=1, action=discord.AuditLogAction.channel_create):
-        if entry.user.id != bot.user.id:
-            event_history[channel.id] = True
-            asyncio.create_task(queue_task(channel.id, channel.delete(reason="حماية: إنشاء غير مصرح")))
-        break
-
-@bot.event
-async def on_guild_role_delete(role):
-    if not bot_data['protection'].get('role_del', True) or event_history.get(role.id): return
-    event_history[role.id] = True
-    
-    try:
-        new_role = await role.guild.create_role(name=role.name, permissions=role.permissions, color=role.color, hoist=role.hoist, mentionable=role.mentionable)
-        asyncio.create_task(queue_task(new_role.id, asyncio.sleep(0)))
-    except: event_history.pop(role.id, None)
-
-@bot.event
-async def on_guild_role_create(role):
-    if event_history.get(role.id) or not bot_data['protection'].get('role_create', True): return
-    async for entry in role.guild.audit_logs(limit=1, action=discord.AuditLogAction.role_create):
-        if entry.user.id != bot.user.id:
-            event_history[role.id] = True
-            asyncio.create_task(queue_task(role.id, role.delete(reason="حماية: إنشاء غير مصرح")))
-        break
-
-@bot.event
-async def on_webhooks_update(channel):
-    if not bot_data['protection'].get('webhook', True): return
-    try:
-        webhooks = await channel.webhooks()
-        for wh in webhooks:
-            asyncio.create_task(queue_task(wh.id, wh.delete(reason="حماية: حذف ويب هوك")))
-    except: pass
 
 @bot.event
 async def on_member_join(member):
