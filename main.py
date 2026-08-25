@@ -354,10 +354,6 @@ Thread(target=run).start()
 
 
 
-import random
-import time
-import discord
-from discord.ext import commands
 
 # إعدادات البوت والـ Intents الأساسية
 intents = discord.Intents.default()
@@ -664,8 +660,7 @@ async def guess_country(ctx):
     except Exception:
         await ctx.send(f"⏰ خلص الوقت! الدولة كانت: **{target_country}**")
 
-# تشغيل البوت
-bot.run("حط_توكن_البوت_هنا")
+
 
 
 
