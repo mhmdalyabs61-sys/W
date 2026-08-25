@@ -412,190 +412,76 @@ async def fast_game(ctx):
 # 3. لعبة خمن الدولة (60 دولة - صورتين لكل دولة - بدون تلميح)
 # ----------------------------------------------------
 countries_images = [
-    # 1. السعودية
+  countries_images = [
+    # الدول العربية
     {"name": "المملكة العربية السعودية", "img": "https://images.unsplash.com/photo-1586724237569-f3d029bf46e5?w=800"},
-    {"name": "المملكة العربية السعودية", "img": "https://images.unsplash.com/photo-1565610224626-3a1c6a233b8a?w=800"},
-    # 2. مصر
     {"name": "مصر", "img": "https://images.unsplash.com/photo-1572252009286-268acec5ca0a?w=800"},
-    {"name": "مصر", "img": "https://images.unsplash.com/photo-1568322445389-f24bac25dd97?w=800"},
-    # 3. الإمارات
     {"name": "الإمارات", "img": "https://images.unsplash.com/photo-1512453979798-5ea266f8880c?w=800"},
-    {"name": "الإمارات", "img": "https://images.unsplash.com/photo-1578895101408-1a3640d782ea?w=800"},
-    # 4. الكويت
     {"name": "الكويت", "img": "https://images.unsplash.com/photo-1565557623262-b51c2513a641?w=800"},
-    {"name": "الكويت", "img": "https://images.unsplash.com/photo-1578632767115-351597cf2477?w=800"},
-    # 5. قطر
     {"name": "قطر", "img": "https://images.unsplash.com/photo-1583089892998-d36183061124?w=800"},
-    {"name": "قطر", "img": "https://images.unsplash.com/photo-1512453979798-5ea266f8880c?w=800"},
-    # 6. البحرين
     {"name": "البحرين", "img": "https://images.unsplash.com/photo-1544620347-c4fd4a3d5957?w=800"},
-    {"name": "البحرين", "img": "https://images.unsplash.com/photo-1578632767115-351597cf2477?w=800"},
-    # 7. عمان
     {"name": "عمان", "img": "https://images.unsplash.com/photo-1580618672591-eb180b1a973f?w=800"},
-    {"name": "عمان", "img": "https://images.unsplash.com/photo-1590523277543-a94d2e4eb00b?w=800"},
-    # 8. الأردن
     {"name": "الأردن", "img": "https://images.unsplash.com/photo-1564507592333-c60657eea523?w=800"},
-    {"name": "الأردن", "img": "https://images.unsplash.com/photo-1585250003424-1ec334f68f49?w=800"},
-    # 9. العراق
     {"name": "العراق", "img": "https://images.unsplash.com/photo-1568605117036-5fe5e7bab0b7?w=800"},
-    {"name": "العراق", "img": "https://images.unsplash.com/photo-1544620347-c4fd4a3d5957?w=800"},
-    # 10. سوريا
     {"name": "سوريا", "img": "https://images.unsplash.com/photo-1541872703-74c5e44368f9?w=800"},
-    {"name": "سوريا", "img": "https://images.unsplash.com/photo-1578632767115-351597cf2477?w=800"},
-    # 11. لبنان
-    {"name": "لبنان", "img": "https://images.unsplash.com/photo-1544620347-c4fd4a3d5957?w=800"},
     {"name": "لبنان", "img": "https://images.unsplash.com/photo-1528164344705-475426879c0d?w=800"},
-    # 12. فلسطين
-    {"name": "فلسطين", "img": "https://images.unsplash.com/photo-1544620347-c4fd4a3d5957?w=800"},
     {"name": "فلسطين", "img": "https://images.unsplash.com/photo-1584551246679-0daf3d275d0f?w=800"},
-    # 13. المغرب
     {"name": "المغرب", "img": "https://images.unsplash.com/photo-1539650116574-8efeb43e2750?w=800"},
-    {"name": "المغرب", "img": "https://images.unsplash.com/photo-1577948334699-2a912bb14798?w=800"},
-    # 14. الجزائر
-    {"name": "الجزائر", "img": "https://images.unsplash.com/photo-1544620347-c4fd4a3d5957?w=800"},
-    {"name": "الجزائر", "img": "https://images.unsplash.com/photo-1580618672591-eb180b1a973f?w=800"},
-    # 15. تونس
-    {"name": "تونس", "img": "https://images.unsplash.com/photo-1544620347-c4fd4a3d5957?w=800"},
-    {"name": "تونس", "img": "https://images.unsplash.com/photo-1568605117036-5fe5e7bab0b7?w=800"},
+    {"name": "الجزائر", "img": "https://images.unsplash.com/photo-1577948334699-2a912bb14798?w=800"},
+    {"name": "تونس", "img": "https://images.unsplash.com/photo-1515542622106-78bda8ba0e5b?w=800"},
 
-    # 16. تركيا
+    # الدول الآسيوية
     {"name": "تركيا", "img": "https://images.unsplash.com/photo-1541432901042-2d8bd64b4a9b?w=800"},
-    {"name": "تركيا", "img": "https://images.unsplash.com/photo-1524231757913-215fce3a2b56?w=800"},
-    # 17. اليابان
     {"name": "اليابان", "img": "https://images.unsplash.com/photo-1503899036084-c55cdd92da26?w=800"},
-    {"name": "اليابان", "img": "https://images.unsplash.com/photo-1493976040374-85c8e12f0c0e?w=800"},
-    # 18. الصين
     {"name": "الصين", "img": "https://images.unsplash.com/photo-1508804052814-cd38ba552e4d?w=800"},
-    {"name": "الصين", "img": "https://images.unsplash.com/photo-1543489822-c49534f3c52e?w=800"},
-    # 19. الهند
     {"name": "الهند", "img": "https://images.unsplash.com/photo-1524492412937-b28074a5d7da?w=800"},
-    {"name": "الهند", "img": "https://images.unsplash.com/photo-1532375810709-75b1da00537c?w=800"},
-    # 20. كوريا الجنوبية
     {"name": "كوريا الجنوبية", "img": "https://images.unsplash.com/photo-1538485399061-1774e402d294?w=800"},
-    {"name": "كوريا الجنوبية", "img": "https://images.unsplash.com/photo-1517154421773-0529f29ea451?w=800"},
-    # 21. إندونيسيا
     {"name": "إندونيسيا", "img": "https://images.unsplash.com/photo-1537996194471-e657df975ab4?w=800"},
-    {"name": "إندونيسيا", "img": "https://images.unsplash.com/photo-1555400038-63f5ba517a47?w=800"},
-    # 22. ماليزيا
     {"name": "ماليزيا", "img": "https://images.unsplash.com/photo-1596422846543-75c6fc197f07?w=800"},
-    {"name": "ماليزيا", "img": "https://images.unsplash.com/photo-1508009603885-50cf7c579365?w=800"},
-    # 23. تايلاند
     {"name": "تايلاند", "img": "https://images.unsplash.com/photo-1552465011-b4e21bf6e79a?w=800"},
-    {"name": "تايلاند", "img": "https://images.unsplash.com/photo-1563492065599-3520f775eeed?w=800"},
-    # 24. باكستان
     {"name": "باكستان", "img": "https://images.unsplash.com/photo-1609137144813-7f9f5b770fb9?w=800"},
-    {"name": "باكستان", "img": "https://images.unsplash.com/photo-1584551246679-0daf3d275d0f?w=800"},
-    # 25. إيران
-    {"name": "إيران", "img": "https://images.unsplash.com/photo-1584551246679-0daf3d275d0f?w=800"},
-    {"name": "إيران", "img": "https://images.unsplash.com/photo-1544620347-c4fd4a3d5957?w=800"},
+    {"name": "إيران", "img": "https://images.unsplash.com/photo-1563492065599-3520f775eeed?w=800"},
 
-    # 26. فرنسا
+    # الدول الأوروبية
     {"name": "فرنسا", "img": "https://images.unsplash.com/photo-1502602898657-3e91760cbb34?w=800"},
-    {"name": "فرنسا", "img": "https://images.unsplash.com/photo-1511739001486-6bfe10ce785f?w=800"},
-    # 27. المملكة المتحدة
     {"name": "المملكة المتحدة", "img": "https://images.unsplash.com/photo-1513635269975-59663e0ac1ad?w=800"},
-    {"name": "المملكة المتحدة", "img": "https://images.unsplash.com/photo-1526129318478-62ed807ebdf9?w=800"},
-    # 28. إيطاليا
     {"name": "إيطاليا", "img": "https://images.unsplash.com/photo-1516483638261-f4dbaf036963?w=800"},
-    {"name": "إيطاليا", "img": "https://images.unsplash.com/photo-1523906834658-6e24ef2386f9?w=800"},
-    # 29. ألمانيا
     {"name": "ألمانيا", "img": "https://images.unsplash.com/photo-1467269204594-9661b134dd2b?w=800"},
-    {"name": "ألمانيا", "img": "https://images.unsplash.com/photo-1599839575945-a9e9af0634f3?w=800"},
-    # 30. إسبانيا
     {"name": "إسبانيا", "img": "https://images.unsplash.com/photo-1543783207-ec64e4d95325?w=800"},
-    {"name": "إسبانيا", "img": "https://images.unsplash.com/photo-1509198397868-475647b2a1e5?w=800"},
-    # 31. روسيا
     {"name": "روسيا", "img": "https://images.unsplash.com/photo-1513326738677-b964603b136d?w=800"},
-    {"name": "روسيا", "img": "https://images.unsplash.com/photo-1520106212299-d99c443e4568?w=800"},
-    # 32. هولندا
     {"name": "هولندا", "img": "https://images.unsplash.com/photo-1512470876302-972faa2aa9a4?w=800"},
-    {"name": "هولندا", "img": "https://images.unsplash.com/photo-1583212292454-1fe6229603b7?w=800"},
-    # 33. سويسرا
     {"name": "سويسرا", "img": "https://images.unsplash.com/photo-1530122037265-a5f1f91d3b99?w=800"},
-    {"name": "سويسرا", "img": "https://images.unsplash.com/photo-1527668773016-83b7f63ef4f8?w=800"},
-    # 34. البرتغال
     {"name": "البرتغال", "img": "https://images.unsplash.com/photo-1515542622106-78bda8ba0e5b?w=800"},
-    {"name": "البرتغال", "img": "https://images.unsplash.com/photo-1541432901042-2d8bd64b4a9b?w=800"},
-    # 35. السويد
     {"name": "السويد", "img": "https://images.unsplash.com/photo-1509356843153-3f1b213bfa7a?w=800"},
-    {"name": "السويد", "img": "https://images.unsplash.com/photo-1513622470522-26c3c8a854bc?w=800"},
-    # 36. النرويج
     {"name": "النرويج", "img": "https://images.unsplash.com/photo-1507034589631-9433cc6bc453?w=800"},
-    {"name": "النرويج", "img": "https://images.unsplash.com/photo-1513326738677-b964603b136d?w=800"},
-    # 37. اليونان
     {"name": "اليونان", "img": "https://images.unsplash.com/photo-1533105079780-92b9be482077?w=800"},
-    {"name": "اليونان", "img": "https://images.unsplash.com/photo-1469854523086-cc02fe5d8800?w=800"},
-    # 38. النمسا
     {"name": "النمسا", "img": "https://images.unsplash.com/photo-1516550893885-303ce2779fce?w=800"},
-    {"name": "النمسا", "img": "https://images.unsplash.com/photo-1530122037265-a5f1f91d3b99?w=800"},
-    # 39. بلجيكا
     {"name": "بلجيكا", "img": "https://images.unsplash.com/photo-1551643206-8d6938a75e12?w=800"},
-    {"name": "بلجيكا", "img": "https://images.unsplash.com/photo-1512470876302-972faa2aa9a4?w=800"},
-    # 40. الدنمارك
     {"name": "الدنمارك", "img": "https://images.unsplash.com/photo-1513622470522-26c3c8a854bc?w=800"},
-    {"name": "الدنمارك", "img": "https://images.unsplash.com/photo-1509356843153-3f1b213bfa7a?w=800"},
 
-    # 41. الولايات المتحدة
+    # دول أمريكا الشمالية والجنوبية
     {"name": "الولايات المتحدة", "img": "https://images.unsplash.com/photo-1485738422979-f5c462d49f74?w=800"},
-    {"name": "الولايات المتحدة", "img": "https://images.unsplash.com/photo-1501594907352-04cda38ebc29?w=800"},
-    # 42. كندا
     {"name": "كندا", "img": "https://images.unsplash.com/photo-1503614472-8c93d56e92ce?w=800"},
-    {"name": "كندا", "img": "https://images.unsplash.com/photo-1517935706615-2717063c2225?w=800"},
-    # 43. المكسيك
     {"name": "المكسيك", "img": "https://images.unsplash.com/photo-1512813277712-4d37537b7713?w=800"},
-    {"name": "المكسيك", "img": "https://images.unsplash.com/photo-1585250003424-1ec334f68f49?w=800"},
-    # 44. البرازيل
     {"name": "البرازيل", "img": "https://images.unsplash.com/photo-1483729558449-99ef09a8c325?w=800"},
-    {"name": "البرازيل", "img": "https://images.unsplash.com/photo-1516483638261-f4dbaf036963?w=800"},
-    # 45. الأرجنتين
     {"name": "الأرجنتين", "img": "https://images.unsplash.com/photo-1589909202874-1779777f7223?w=800"},
-    {"name": "الأرجنتين", "img": "https://images.unsplash.com/photo-1544620347-c4fd4a3d5957?w=800"},
-    # 46. كولومبيا
     {"name": "كولومبيا", "img": "https://images.unsplash.com/photo-1590523277543-a94d2e4eb00b?w=800"},
-    {"name": "كولومبيا", "img": "https://images.unsplash.com/photo-1580618672591-eb180b1a973f?w=800"},
-    # 47. تشيلي
-    {"name": "تشيلي", "img": "https://images.unsplash.com/photo-1544620347-c4fd4a3d5957?w=800"},
     {"name": "تشيلي", "img": "https://images.unsplash.com/photo-1564507592333-c60657eea523?w=800"},
-    # 48. بيرو
     {"name": "بيرو", "img": "https://images.unsplash.com/photo-1526392060635-9d6019884377?w=800"},
-    {"name": "بيرو", "img": "https://images.unsplash.com/photo-1503899036084-c55cdd92da26?w=800"},
-    # 49. كوبا
     {"name": "كوبا", "img": "https://images.unsplash.com/photo-1500759285702-e7d61837f48c?w=800"},
-    {"name": "كوبا", "img": "https://images.unsplash.com/photo-1512813277712-4d37537b7713?w=800"},
 
-    # 50. أستراليا
+    # دول أستراليا وإفريقيا وباقي القارات
     {"name": "أستراليا", "img": "https://images.unsplash.com/photo-1506973035872-a4ec16b8e8d9?w=800"},
-    {"name": "أستراليا", "img": "https://images.unsplash.com/photo-1523482580672-f109ba8cb9be?w=800"},
-    # 51. نيوزيلندا
     {"name": "نيوزيلندا", "img": "https://images.unsplash.com/photo-1469521669194-0384891ffc4f?w=800"},
-    {"name": "نيوزيلندا", "img": "https://images.unsplash.com/photo-1507034589631-9433cc6bc453?w=800"},
-    # 52. جنوب إفريقيا
-    {"name": "جنوب إفريقيا", "img": "https://images.unsplash.com/photo-1580618672591-eb180b1a973f?w=800"},
     {"name": "جنوب إفريقيا", "img": "https://images.unsplash.com/photo-1516426122078-c23e76319801?w=800"},
-    # 53. كينيا
-    {"name": "كينيا", "img": "https://images.unsplash.com/photo-1516426122078-c23e76319801?w=800"},
-    {"name": "كينيا", "img": "https://images.unsplash.com/photo-1580618672591-eb180b1a973f?w=800"},
-    # 54. نيجيريا
-    {"name": "نيجيريا", "img": "https://images.unsplash.com/photo-1544620347-c4fd4a3d5957?w=800"},
+    {"name": "كينيا", "img": "https://images.unsplash.com/photo-1544620347-c4fd4a3d5957?w=800"},
     {"name": "نيجيريا", "img": "https://images.unsplash.com/photo-1568605117036-5fe5e7bab0b7?w=800"},
-    # 55. أيسلندا
     {"name": "أيسلندا", "img": "https://images.unsplash.com/photo-1504893524553-29586e1e191d?w=800"},
-    {"name": "أيسلندا", "img": "https://images.unsplash.com/photo-1513326738677-b964603b136d?w=800"},
-    # 56. أيرلندا
     {"name": "أيرلندا", "img": "https://images.unsplash.com/photo-1590089415225-4034664ce935?w=800"},
-    {"name": "أيرلندا", "img": "https://images.unsplash.com/photo-1513635269975-59663e0ac1ad?w=800"},
-    # 57. فنلندا
     {"name": "فنلندا", "img": "https://images.unsplash.com/photo-1517783997529-28f58c740a48?w=800"},
-    {"name": "فنلندا", "img": "https://images.unsplash.com/photo-1509356843153-3f1b213bfa7a?w=800"},
-    # 58. المجر
     {"name": "المجر", "img": "https://images.unsplash.com/photo-1549877452-9c387954fbc2?w=800"},
-    {"name": "المجر", "img": "https://images.unsplash.com/photo-1512470876302-972faa2aa9a4?w=800"},
-    # 59. رومانيا
     {"name": "رومانيا", "img": "https://images.unsplash.com/photo-1584646098378-0874589d76b1?w=800"},
-    {"name": "رومانيا", "img": "https://images.unsplash.com/photo-1541432901042-2d8bd64b4a9b?w=800"},
-    # 60. بولندا
-    {"name": "بولندا", "img": "https://images.unsplash.com/photo-1519138119067-6b4c3c299a1e?w=800"},
-    {"name": "بولندا", "img": "https://images.unsplash.com/photo-1467269204594-9661b134dd2b?w=800"}
+    {"name": "بولندا", "img": "https://images.unsplash.com/photo-1519138119067-6b4c3c299a1e?w=800"}
 ]
 
 @bot.command(name="خمن", aliases=["guess"])
