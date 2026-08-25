@@ -303,6 +303,23 @@ def run(): app.run(host='0.0.0.0', port=8080)
 Thread(target=run).start()
 
 
+@bot.command(name="لف", aliases=["ban", "باند"])
+@commands.has_permissions(ban_members=True)
+async def ban_member(ctx, member: discord.Member, *, reason: str = "بدون سبب"):
+    try:
+        await member.ban(reason=reason)
+        await ctx.send(f"**🔨 تم تبنيد العضو {member.mention} | السبب: {reason}**")
+    except discord.Forbidden:
+        await ctx.send("**❌ ما أقدر أبند هذا الشخص، رتبته أعلى مني أو صلاحياتي ناقصة!**")
+    except Exception as e:
+        await ctx.send(f"**❌ صار فيه خطأ: {e}**")
+
+@ban_member.error
+async def ban_error(ctx, error):
+    if isinstance(error, commands.MissingPermissions):
+        await ctx.send("**❌ ما عندك صلاحية Ban Members عشان تستخدم هالأمر!**")
+    elif isinstance(error, commands.MissingRequiredArgument):
+        await ctx.send("**⚠️ الاستخدام الصحيح: !لف @الشخص (السبب اختياري)**")
 
 
 
