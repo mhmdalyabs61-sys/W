@@ -543,6 +543,66 @@ async def on_member_join(member):
 
 
 
+import datetime
+import discord
+from discord.ext import commands
+import re
+
+@bot.command(name="تايم", aliases=["timeout"])
+@commands.has_permissions(moderate_members=True)
+async def timeout_member(ctx, member: discord.Member, time_str: str = "5m", *, reason: str = "بدون سبب"):
+    # تحليل المدة الزمنية ودعم الأشكال المتعددة مثل 5d, 6m, 1h30m أو أرقام مجردة
+    total_seconds = 0
+    
+    # التحقق إذا كانت المدة مجرد رقم (يعتبرها دقائق تلقائياً)
+    if time_str.isdigit():
+        total_seconds = int(time_str) * 60
+        time_text = f"{time_str} دقيقة"
+    else:
+        # البحث عن الأجزاء مثل (5d, 6m, 2h, 30s)
+        matches = re.findall(r'(\d+)([smhd])', time_str.lower())
+        if not matches:
+            await ctx.send("**❌ صيغة الوقت خاطئة! استخدم مثلاً: `5d` لأيام، `6m` لدقائق، `2h` لساعات، أو اكتب الرقم مباشرة.**")
+            return
+            
+        time_parts = []
+        for amount_str, unit in matches:
+            amount = int(amount_str)
+            if unit == 's':
+                total_seconds += amount
+                time_parts.append(f"{amount} ثانية")
+            elif unit == 'm':
+                total_seconds += amount * 60
+                time_parts.append(f"{amount} دقيقة")
+            elif unit == 'h':
+                total_seconds += amount * 3600
+                time_parts.append(f"{amount} ساعة")
+            elif unit == 'd':
+                total_seconds += amount * 86400
+                time_parts.append(f"{amount} يوم")
+                
+        time_text = " و ".join(time_parts)
+
+    if total_seconds <= 0:
+        await ctx.send("**❌ يجب أن تكون مدة التايم أكبر من الصفر!**")
+        return
+
+    duration = datetime.timedelta(seconds=total_seconds)
+
+    try:
+        await member.timeout(duration, reason=reason)
+        await ctx.send(f"**⏰ تم إعطاء تايم اوت لـ {member.mention} لمدة {time_text} | السبب: {reason}**")
+    except discord.Forbidden:
+        await ctx.send("**❌ ما أقدر أعطي تايم اوت لهذا الشخص، رتبته أعلى مني أو صلاحياتي ناقصة!**")
+    except Exception as e:
+        await ctx.send(f"**❌ صار فيه خطأ: {e}**")
+
+@timeout_member.error
+async def timeout_error(ctx, error):
+    if isinstance(error, commands.MissingPermissions):
+        await ctx.send("**❌ ما عندك صلاحية Moderate Members عشان تستخدم هالأمر!**")
+    elif isinstance(error, commands.MissingRequiredArgument):
+        await ctx.send("**⚠️ الاستخدام الصحيح:**\n`تايم @الشخص` (يعطيه 5 دقائق افتراضي)\n`تايم @الشخص 5d`\n`تايم @الشخص 6m سبام`")
 
 # تشغيل البوت
 import os
