@@ -412,84 +412,88 @@ async def fast_game(ctx):
 # 3. لعبة خمن الدولة (60 دولة - صورتين لكل دولة - بدون تلميح)
 # ----------------------------------------------------
 
-countries_images = [
-    {"name": "المملكة العربية السعودية", "img": "https://images.unsplash.com/photo-1586724237569-f3d029bf46e5?w=800"},
-    {"name": "مصر", "img": "https://images.unsplash.com/photo-1572252009286-268acec5ca0a?w=800"},
-    {"name": "الإمارات", "img": "https://images.unsplash.com/photo-1512453979798-5ea266f8880c?w=800"},
-    {"name": "الكويت", "img": "https://images.unsplash.com/photo-1565557623262-b51c2513a641?w=800"},
-    {"name": "قطر", "img": "https://images.unsplash.com/photo-1583089892998-d36183061124?w=800"},
-    {"name": "البحرين", "img": "https://images.unsplash.com/photo-1544620347-c4fd4a3d5957?w=800"},
-    {"name": "عمان", "img": "https://images.unsplash.com/photo-1580618672591-eb180b1a973f?w=800"},
-    {"name": "الأردن", "img": "https://images.unsplash.com/photo-1564507592333-c60657eea523?w=800"},
-    {"name": "العراق", "img": "https://images.unsplash.com/photo-1568605117036-5fe5e7bab0b7?w=800"},
-    {"name": "سوريا", "img": "https://images.unsplash.com/photo-1541872703-74c5e44368f9?w=800"},
-    {"name": "لبنان", "img": "https://images.unsplash.com/photo-1528164344705-475426879c0d?w=800"},
-    {"name": "فلسطين", "img": "https://images.unsplash.com/photo-1584551246679-0daf3d275d0f?w=800"},
-    {"name": "المغرب", "img": "https://images.unsplash.com/photo-1539650116574-8efeb43e2750?w=800"},
-    {"name": "الجزائر", "img": "https://images.unsplash.com/photo-1577948334699-2a912bb14798?w=800"},
-    {"name": "تونس", "img": "https://images.unsplash.com/photo-1515542622106-78bda8ba0e5b?w=800"},
-    {"name": "تركيا", "img": "https://images.unsplash.com/photo-1541432901042-2d8bd64b4a9b?w=800"},
-    {"name": "اليابان", "img": "https://images.unsplash.com/photo-1503899036084-c55cdd92da26?w=800"},
-    {"name": "الصين", "img": "https://images.unsplash.com/photo-1508804052814-cd38ba552e4d?w=800"},
-    {"name": "الهند", "img": "https://images.unsplash.com/photo-1524492412937-b28074a5d7da?w=800"},
-    {"name": "كوريا الجنوبية", "img": "https://images.unsplash.com/photo-1538485399061-1774e402d294?w=800"},
-    {"name": "إندونيسيا", "img": "https://images.unsplash.com/photo-1537996194471-e657df975ab4?w=800"},
-    {"name": "ماليزيا", "img": "https://images.unsplash.com/photo-1596422846543-75c6fc197f07?w=800"},
-    {"name": "تايلاند", "img": "https://images.unsplash.com/photo-1552465011-b4e21bf6e79a?w=800"},
-    {"name": "باكستان", "img": "https://images.unsplash.com/photo-1609137144813-7f9f5b770fb9?w=800"},
-    {"name": "إيران", "img": "https://images.unsplash.com/photo-1563492065599-3520f775eeed?w=800"},
-    {"name": "فرنسا", "img": "https://images.unsplash.com/photo-1502602898657-3e91760cbb34?w=800"},
-    {"name": "المملكة المتحدة", "img": "https://images.unsplash.com/photo-1513635269975-59663e0ac1ad?w=800"},
-    {"name": "إيطاليا", "img": "https://images.unsplash.com/photo-1516483638261-f4dbaf036963?w=800"},
-    {"name": "ألمانيا", "img": "https://images.unsplash.com/photo-1467269204594-9661b134dd2b?w=800"},
-    {"name": "إسبانيا", "img": "https://images.unsplash.com/photo-1543783207-ec64e4d95325?w=800"},
-    {"name": "روسيا", "img": "https://images.unsplash.com/photo-1513326738677-b964603b136d?w=800"},
-    {"name": "هولندا", "img": "https://images.unsplash.com/photo-1512470876302-972faa2aa9a4?w=800"},
-    {"name": "سويسرا", "img": "https://images.unsplash.com/photo-1530122037265-a5f1f91d3b99?w=800"},
-    {"name": "البرتغال", "img": "https://images.unsplash.com/photo-1515542622106-78bda8ba0e5b?w=800"},
-    {"name": "السويد", "img": "https://images.unsplash.com/photo-1509356843153-3f1b213bfa7a?w=800"},
-    {"name": "النرويج", "img": "https://images.unsplash.com/photo-1507034589631-9433cc6bc453?w=800"},
-    {"name": "اليونان", "img": "https://images.unsplash.com/photo-1533105079780-92b9be482077?w=800"},
-    {"name": "النمسا", "img": "https://images.unsplash.com/photo-1516550893885-303ce2779fce?w=800"},
-    {"name": "بلجيكا", "img": "https://images.unsplash.com/photo-1551643206-8d6938a75e12?w=800"},
-    {"name": "الدنمارك", "img": "https://images.unsplash.com/photo-1513622470522-26c3c8a854bc?w=800"},
-    {"name": "الولايات المتحدة", "img": "https://images.unsplash.com/photo-1485738422979-f5c462d49f74?w=800"},
-    {"name": "كندا", "img": "https://images.unsplash.com/photo-1503614472-8c93d56e92ce?w=800"},
-    {"name": "المكسيك", "img": "https://images.unsplash.com/photo-1512813277712-4d37537b7713?w=800"},
-    {"name": "البرازيل", "img": "https://images.unsplash.com/photo-1483729558449-99ef09a8c325?w=800"},
-    {"name": "الأرجنتين", "img": "https://images.unsplash.com/photo-1589909202874-1779777f7223?w=800"},
-    {"name": "كولومبيا", "img": "https://images.unsplash.com/photo-1590523277543-a94d2e4eb00b?w=800"},
-    {"name": "تشيلي", "img": "https://images.unsplash.com/photo-1564507592333-c60657eea523?w=800"},
-    {"name": "بيرو", "img": "https://images.unsplash.com/photo-1526392060635-9d6019884377?w=800"},
-    {"name": "كوبا", "img": "https://images.unsplash.com/photo-1500759285702-e7d61837f48c?w=800"},
-    {"name": "أستراليا", "img": "https://images.unsplash.com/photo-1506973035872-a4ec16b8e8d9?w=800"},
-    {"name": "نيوزيلندا", "img": "https://images.unsplash.com/photo-1469521669194-0384891ffc4f?w=800"},
-    {"name": "جنوب إفريقيا", "img": "https://images.unsplash.com/photo-1516426122078-c23e76319801?w=800"},
-    {"name": "كينيا", "img": "https://images.unsplash.com/photo-1544620347-c4fd4a3d5957?w=800"},
-    {"name": "نيجيريا", "img": "https://images.unsplash.com/photo-1568605117036-5fe5e7bab0b7?w=800"},
-    {"name": "أيسلندا", "img": "https://images.unsplash.com/photo-1504893524553-29586e1e191d?w=800"},
-    {"name": "أيرلندا", "img": "https://images.unsplash.com/photo-1590089415225-4034664ce935?w=800"},
-    {"name": "فنلندا", "img": "https://images.unsplash.com/photo-1517783997529-28f58c740a48?w=800"},
-    {"name": "المجر", "img": "https://images.unsplash.com/photo-1549877452-9c387954fbc2?w=800"},
-    {"name": "رومانيا", "img": "https://images.unsplash.com/photo-1584646098378-0874589d76b1?w=800"},
-    {"name": "بولندا", "img": "https://images.unsplash.com/photo-1519138119067-6b4c3c299a1e?w=800"}
-]
+import random
+import discord
 
+countries_images = {
+    "المملكة العربية السعودية": "https://images.unsplash.com/photo-1578836537282-3171d77f8632?w=800",
+    "مصر": "https://images.unsplash.com/photo-1539650116574-8efeb43e2750?w=800",
+    "الإمارات": "https://images.unsplash.com/photo-1512453979798-5ea266f8880c?w=800",
+    "الكويت": "https://images.unsplash.com/photo-1578895101408-1a364e1c736f?w=800",
+    "قطر": "https://images.unsplash.com/photo-1578895101332-fa99f681d638?w=800",
+    "البحرين": "https://images.unsplash.com/photo-1518684079-3c830dcef090?w=800",
+    "عمان": "https://images.unsplash.com/photo-1580618672591-eb180b1a973f?w=800",
+    "الأردن": "https://images.unsplash.com/photo-1564507592333-c60657eea523?w=800",
+    "العراق": "https://images.unsplash.com/photo-1568605117036-5fe5e7bab0b7?w=800",
+    "سوريا": "https://images.unsplash.com/photo-1541872703-74c5e44368f9?w=800",
+    "لبنان": "https://images.unsplash.com/photo-1528164344705-475426879c0d?w=800",
+    "فلسطين": "https://images.unsplash.com/photo-1584551246679-0daf3d275d0f?w=800",
+    "المغرب": "https://images.unsplash.com/photo-1539650116574-8efeb43e2750?w=800",
+    "الجزائر": "https://images.unsplash.com/photo-1577948334699-2a912bb14798?w=800",
+    "تونس": "https://images.unsplash.com/photo-1515542622106-78bda8ba0e5b?w=800",
+    "ليبيا": "https://images.unsplash.com/photo-1544620347-c4fd4a3d5957?w=800",
+    "السودان": "https://images.unsplash.com/photo-1568605117036-5fe5e7bab0b7?w=800",
+    "اليمن": "https://images.unsplash.com/photo-1580618672591-eb180b1a973f?w=800",
+    "تركيا": "https://images.unsplash.com/photo-1524231757913-215fce3a9b5a?w=800",
+    "إيران": "https://images.unsplash.com/photo-1563492065599-3520f775eeed?w=800",
+    "باكستان": "https://images.unsplash.com/photo-1609137144813-7f9f5b770fb9?w=800",
+    "الهند": "https://images.unsplash.com/photo-1524492412937-b28074a5d7da?w=800",
+    "الصين": "https://images.unsplash.com/photo-1508804052814-cd38ba552e4d?w=800",
+    "اليابان": "https://images.unsplash.com/photo-1503899036084-c55cdd92da26?w=800",
+    "كوريا الجنوبية": "https://images.unsplash.com/photo-1538485399061-1774e402d294?w=800",
+    "إندونيسيا": "https://images.unsplash.com/photo-1537996194471-e657df975ab4?w=800",
+    "ماليزيا": "https://images.unsplash.com/photo-1596422846543-75c6fc197f07?w=800",
+    "تايلاند": "https://images.unsplash.com/photo-1552465011-b4e21bf6e79a?w=800",
+    "فيتنام": "https://images.unsplash.com/photo-1509114397022-ed747cca3f65?w=800",
+    "الفلبين": "https://images.unsplash.com/photo-1518548419970-58e3b4079ab2?w=800",
+    "روسيا": "https://images.unsplash.com/photo-1513326738677-b964603b136d?w=800",
+    "فرنسا": "https://images.unsplash.com/photo-1502602898657-3e91760cbb34?w=800",
+    "المملكة المتحدة": "https://images.unsplash.com/photo-1513635269975-59663e0ac1ad?w=800",
+    "إيطاليا": "https://images.unsplash.com/photo-1529260830199-42c24126f198?w=800",
+    "ألمانيا": "https://images.unsplash.com/photo-1467269204594-9661b134dd2b?w=800",
+    "إسبانيا": "https://images.unsplash.com/photo-1539037116277-4db20889f2d4?w=800",
+    "هولندا": "https://images.unsplash.com/photo-1512470876302-972faa2aa9a4?w=800",
+    "سويسرا": "https://images.unsplash.com/photo-1530122037265-a5f1f91d3b99?w=800",
+    "البلجيكا": "https://images.unsplash.com/photo-1551643206-8d6938a75e12?w=800",
+    "النمسا": "https://images.unsplash.com/photo-1516550893885-303ce2779fce?w=800",
+    "البرتغال": "https://images.unsplash.com/photo-1515542622106-78bda8ba0e5b?w=800",
+    "اليونان": "https://images.unsplash.com/photo-1533105079780-92b9be482077?w=800",
+    "السويد": "https://images.unsplash.com/photo-1509356843153-3f1b213bfa7a?w=800",
+    "النرويج": "https://images.unsplash.com/photo-1507034589631-9433cc6bc453?w=800",
+    "الدنمارك": "https://images.unsplash.com/photo-1513622470522-26c3c8a854bc?w=800",
+    "أيسلندا": "https://images.unsplash.com/photo-1504893524553-29586e1e191d?w=800",
+    "أيرلندا": "https://images.unsplash.com/photo-1590089415225-4034664ce935?w=800",
+    "بولندا": "https://images.unsplash.com/photo-1519138119067-6b4c3c299a1e?w=800",
+    "رومانيا": "https://images.unsplash.com/photo-1584646098378-0874589d76b1?w=800",
+    "المجر": "https://images.unsplash.com/photo-1549877452-9c387954fbc2?w=800",
+    "الولايات المتحدة": "https://images.unsplash.com/photo-1485738422979-f5c462d49f74?w=800",
+    "كندا": "https://images.unsplash.com/photo-1503614472-8c93d56e92ce?w=800",
+    "المكسيك": "https://images.unsplash.com/photo-1512813277712-4d37537b7713?w=800",
+    "البرازيل": "https://images.unsplash.com/photo-1483729558449-99ef09a8c325?w=800",
+    "الأرجنتين": "https://images.unsplash.com/photo-1589909202874-1779777f7223?w=800",
+    "كولومبيا": "https://images.unsplash.com/photo-1590523277543-a94d2e4eb00b?w=800",
+    "تشيلي": "https://images.unsplash.com/photo-1564507592333-c60657eea523?w=800",
+    "بيرو": "https://images.unsplash.com/photo-1526392060635-9d6019884377?w=800",
+    "أستراليا": "https://images.unsplash.com/photo-1506973035872-a4ec16b8e8d9?w=800",
+    "نيوزيلندا": "https://images.unsplash.com/photo-1469521669194-0384891ffc4f?w=800"
+}
 
-@bot.command(name="خمن", aliases=["guess"])
+@bot.command(name="خمن")
 async def guess_country(ctx):
-    item = random.choice(countries_images)
-    target_country = item["name"]
+    country_name = random.choice(list(countries_images.keys()))
+    image_url = countries_images[country_name]
     
     embed = discord.Embed(
-        title="📸 تحدي خمن الدولة من المعلم السياحي!",
-        description="**وين الدولة اللي في الصورة؟ أسرع شخص يكتب اسمها بالشات!**",
-        color=0x00e6b4
+        title="🌆 خمن الدولة من الشارع أو المكان العام",
+        description="**اكتب اسم الدولة في الشات الآن!**",
+        color=discord.Color.blurple()
     )
-    embed.set_image(url=item["img"])
-    embed.set_footer(text="لديك 10 ثوانٍ فقط للتخمين!")
+    embed.set_image(url=image_url)
     
     await ctx.send(embed=embed)
+    
+    # احفظ الـ country_name في متغير عندك للمقارنة (الإجابة الصحيحة)
+
     
     def check(m):
         user_text = m.content.strip()
