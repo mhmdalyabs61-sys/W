@@ -880,10 +880,15 @@ async def user_info(ctx, member: discord.Member = None):
 # قاعدة بيانات مؤقتة لتخزين التحذيرات
 warnings_db = {}
 
-# 5. أمر التحذير (تحذير @الشخص السبب)
+# 5. أمر التحذير (تحذير @الشخص السبب) - مع التحقق من الرتبة
 @bot.command(name="تحذير", aliases=["warn"])
 @commands.has_permissions(manage_messages=True)
 async def warn_member(ctx, member: discord.Member, *, reason: str = "بدون سبب"):
+    # منع المشرف من تحذير شخص رتبته أعلى منه أو مساوية له (باستثناء صاحب السيرفر)
+    if ctx.author != ctx.guild.owner and member.top_role >= ctx.author.top_role:
+        await ctx.send("**❌ ما يمكنك تحذير شخص رتبته أعلى منك أو مساوية لرتبتك!**")
+        return
+
     if member.id not in warnings_db:
         warnings_db[member.id] = []
     
@@ -900,6 +905,30 @@ async def warn_member(ctx, member: discord.Member, *, reason: str = "بدون س
         await member.send(f"**⚠️ لقد تم تحذيرك في سيرفر {ctx.guild.name} | السبب: {reason}**")
     except:
         pass
+
+
+# 8. أمر تغيير الاسم (اسم @الشخص الاسم الجديد) - مع التحقق من الرتبة
+@bot.command(name="اسم", aliases=["nick", "nickname"])
+@commands.has_permissions(manage_nicknames=True)
+async def change_nickname(ctx, member: discord.Member, *, new_name: str = None):
+    # منع المشرف من تغيير اسم شخص رتبته أعلى منه أو مساوية له (باستثناء صاحب السيرفر)
+    if ctx.author != ctx.guild.owner and member.top_role >= ctx.author.top_role:
+        await ctx.send("**❌ ما يمكنك تغيير اسم شخص رتبته أعلى منك أو مساوية لرتبتك!**")
+        return
+
+    try:
+        nickname_to_set = None if new_name and new_name.lower() == "none" else new_name
+        await member.edit(nick=nickname_to_set)
+        
+        if nickname_to_set:
+            await ctx.send(f"**✏️ تم تغيير اسم {member.mention} إلى `{nickname_to_set}` بنجاح!**")
+        else:
+            await ctx.send(f"**🔄 تم إرجاع اسم {member.mention} إلى اسمه الطبيعي الأصلي!**")
+    except discord.Forbidden:
+        await ctx.send("**❌ ما أقدر أغير اسم هذا الشخص، رتبته أعلى من بوتي أو صلاحياتي ناقصة!**")
+    except Exception as e:
+        await ctx.send(f"**❌ صار فيه خطأ: {e}**")
+
 
 @warn_member.error
 async def warn_error(ctx, error):
@@ -953,30 +982,7 @@ async def remove_warning_error(ctx, error):
         await ctx.send("**⚠️ الاستخدام الصحيح: إزالة @الشخص [رقم التحذير]**\nمثال: `إزالة @محمود 1`")
 
 
-# 8. أمر تغيير الاسم أو إرجاعه (اسم @الشخص [الاسم الجديد أو اتركه فاضي])
-@bot.command(name="اسم", aliases=["nick", "nickname"])
-@commands.has_permissions(manage_nicknames=True)
-async def change_nickname(ctx, member: discord.Member, *, new_name: str = None):
-    try:
-        # إذا كتب اسم جديد يغيره، وإذا ما كتب شي يخليه None عشان يرجع لاسمه الطبيعي
-        nickname_to_set = None if new_name and new_name.lower() == "none" else new_name
-        await member.edit(nick=nickname_to_set)
-        
-        if nickname_to_set:
-            await ctx.send(f"**✏️ تم تغيير اسم {member.mention} إلى `{nickname_to_set}` بنجاح!**")
-        else:
-            await ctx.send(f"**🔄 تم إرجاع اسم {member.mention} إلى اسمه الطبيعي الأصلي!**")
-    except discord.Forbidden:
-        await ctx.send("**❌ ما أقدر أغير اسم هذا الشخص، رتبته أعلى مني أو صلاحياتي ناقصة!**")
-    except Exception as e:
-        await ctx.send(f"**❌ صار فيه خطأ: {e}**")
 
-@change_nickname.error
-async def change_nickname_error(ctx, error):
-    if isinstance(error, commands.MissingPermissions):
-        await ctx.send("**❌ ما عندك صلاحية Manage Nicknames عشان تستخدم هالأمر!**")
-    elif isinstance(error, commands.MissingRequiredArgument):
-        await ctx.send("**⚠️ الاستخدام الصحيح:**\n`اسم @الشخص أحمد` (لتغيير اسمه)\n`اسم @الشخص` (لإرجاعه لاسمه الأصلي)")
 
 # تشغيل البوت
 import os
