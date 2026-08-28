@@ -736,6 +736,52 @@ async def timeout_error(ctx, error):
         await ctx.send("**❌ ما عندك صلاحية Moderate Members عشان تستخدم هالأمر!**")
     elif isinstance(error, commands.MissingRequiredArgument):
         await ctx.send("**⚠️ الاستخدام الصحيح:**\n`تايم @الشخص` (يعطيه 5 دقائق افتراضي)\n`تايم @الشخص 5d`\n`تايم @الشخص 6m سبام`")
+import discord
+from discord.ext import commands
+
+# 1. أمر فك التايم (تكلم)
+@bot.command(name="تكلم", aliases=["untimeout", "unmute"])
+@commands.has_permissions(moderate_members=True)
+async def untimeout_member(ctx, member: discord.Member, *, reason: str = "بدون سبب"):
+    try:
+        await member.timeout(None, reason=reason)
+        await ctx.send(f"**🔊 تم فك التايم عن {member.mention} بنجاح! | السبب: {reason}**")
+    except discord.Forbidden:
+        await ctx.send("**❌ ما أقدر أفك التايم عن هذا الشخص، رتبته أعلى مني أو صلاحياتي ناقصة!**")
+    except Exception as e:
+        await ctx.send(f"**❌ صار فيه خطأ: {e}**")
+
+@untimeout_member.error
+async def untimeout_error(ctx, error):
+    if isinstance(error, commands.MissingPermissions):
+        await ctx.send("**❌ ما عندك صلاحية Moderate Members عشان تستخدم هالأمر!**")
+    elif isinstance(error, commands.MissingRequiredArgument):
+        await ctx.send("**⚠️ الاستخدام الصحيح: تكلم @الشخص [السبب اختياري]**")
+
+
+# 2. أمر فك الباند (فك)
+@bot.command(name="فك", aliases=["unban"])
+@commands.has_permissions(ban_members=True)
+async def unban_member(ctx, user_id: int, *, reason: str = "بدون سبب"):
+    try:
+        user = await bot.fetch_user(user_id)
+        await ctx.guild.unban(user, reason=reason)
+        await ctx.send(f"**🔓 تم فك الباند عن العضو `{user}` (الايدي: {user_id}) بنجاح! | السبب: {reason}**")
+    except discord.NotFound:
+        await ctx.send("**❌ ما لقيت شخص بهذا الأيدي محظور في السيرفر!**")
+    except discord.Forbidden:
+        await ctx.send("**❌ صلاحياتي ناقصة لفك الباند!**")
+    except Exception as e:
+        await ctx.send(f"**❌ صار فيه خطأ: تأكد من كتابة الأيدي بشكل صحيح. ({e})**")
+
+@unban_member.error
+async def unban_error(ctx, error):
+    if isinstance(error, commands.MissingPermissions):
+        await ctx.send("**❌ ما عندك صلاحية Ban Members عشان تستخدم هالأمر!**")
+    elif isinstance(error, commands.MissingRequiredArgument):
+        await ctx.send("**⚠️ الاستخدام الصحيح: فك [أيدي الشخص] [السبب اختياري]**\nمثال: `فك 123456789012345678 عفو عام`")
+    elif isinstance(error, commands.BadArgument):
+        await ctx.send("**⚠️ يرجى كتابة أيدي العضو بشكل أرقام صحيحة!**")
 
 # تشغيل البوت
 import os
