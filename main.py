@@ -19,115 +19,127 @@ bot = commands.Bot(command_prefix="!", intents=intents)
 # ══════════════════════════════════════════════════════════════
 TOKEN = 'YOUR_BOT_TOKEN_HERE'
 # ══════════════════════════════════════════════════════════════
-import aiohttp
 import random
-import asyncio
-from discord.ext import tasks
+import aiohttp
+import discord
+from discord.ext import tasks, commands
 
-CHANNEL_ID = 1541497958741311538
+CHANNEL_ID = 1541497958741311538  # آيدي الروم المطلوب
 
+# كتب الحديث المعتمدة (الصحيحين)
 HADITH_BOOKS = ["bukhari", "muslim"]
 
-TOTAL_AYAHS = 6236
+TOTAL_AYAHS = 6236  # إجمالي عدد آيات القرآن الكريم
 SEND_INTERVAL_MINUTES = 5
 
 
-async def fetch_random_ayah(session: aiohttp.ClientSession) -> discord.Embed | None:
-    ayah_number = random.randint(1, TOTAL_AYAHS)
-    url = f"https://api.alquran.cloud/v1/ayah/{ayah_number}/quran-uthmani"
+class QuranHadithCog(commands.Cog):
+    def __init__(self, bot):
+        self.bot = bot
+        self.send_reminder.start()
 
-    async with session.get(url) as resp:
-        if resp.status != 200:
+    def cog_unload(self):
+        self.send_reminder.cancel()
+
+    async def fetch_random_ayah(self, session: aiohttp.ClientSession) -> discord.Embed | None:
+        """جلب آية عشوائية من القرآن الكريم مع اسم السورة ورقم الآية."""
+        ayah_number = random.randint(1, TOTAL_AYAHS)
+        url = f"https://api.alquran.cloud/v1/ayah/{ayah_number}/quran-uthmani"
+
+        async with session.get(url) as resp:
+            if resp.status != 200:
+                return None
+            data = await resp.json()
+
+        if data.get("code") != 200:
             return None
-        data = await resp.json()
 
-    if data.get("code") != 200:
-        return None
+        ayah = data["data"]
+        surah = ayah["surah"]
 
-    ayah = data["data"]
-    surah = ayah["surah"]
+        embed = discord.Embed(
+            title=f"📖 سورة {surah['name']} - الآية {ayah['numberInSurah']}",
+            description=f"﴿ {ayah['text']} ﴾",
+            color=discord.Color.green(),
+        )
+        embed.set_footer(text="المصدر: القرآن الكريم (نص عثماني موثق - alquran.cloud)")
+        return embed
 
-    embed = discord.Embed(
-        title=f"📖 سورة {surah['name']} - الآية {ayah['numberInSurah']}",
-        description=f"﴿ {ayah['text']} ﴾",
-        color=discord.Color.green(),
-    )
-    embed.set_footer(text="المصدر: القرآن الكريم (نص عثماني موثق - alquran.cloud)")
-    return embed
+    async def fetch_random_hadith(self, session: aiohttp.ClientSession) -> discord.Embed | None:
+        """جلب حديث عشوائي من أحد كتب الحديث المحددة في HADITH_BOOKS."""
+        book = random.choice(HADITH_BOOKS)
 
+        info_url = f"https://api.hadith.gading.dev/books/{book}"
+        async with session.get(info_url) as resp:
+            if resp.status != 200:
+                return None
+            info = await resp.json()
 
-async def fetch_random_hadith(session: aiohttp.ClientSession) -> discord.Embed | None:
-    book = random.choice(HADITH_BOOKS)
-
-    info_url = f"https://api.hadith.gading.dev/books/{book}"
-    async with session.get(info_url) as resp:
-        if resp.status != 200:
+        available = info.get("data", {}).get("available")
+        if not available:
             return None
-        info = await resp.json()
 
-    available = info.get("data", {}).get("available")
-    if not available:
-        return None
+        hadith_number = random.randint(1, available)
+        hadith_url = f"https://api.hadith.gading.dev/books/{book}/{hadith_number}"
 
-    hadith_number = random.randint(1, available)
-    hadith_url = f"https://api.hadith.gading.dev/books/{book}/{hadith_number}"
+        async with session.get(hadith_url) as resp:
+            if resp.status != 200:
+                return None
+            result = await resp.json()
 
-    async with session.get(hadith_url) as resp:
-        if resp.status != 200:
+        hadith = result.get("data", {}).get("contents", {})
+        if not hadith:
             return None
-        result = await resp.json()
 
-    hadith = result.get("data", {}).get("contents", {})
-    if not hadith:
-        return None
+        book_names = {
+            "bukhari": "صحيح البخاري",
+            "muslim": "صحيح مسلم",
+            "tirmidzi": "جامع الترمذي",
+            "abudaud": "سنن أبي داود",
+            "nasai": "سنن النسائي",
+            "ibnumajah": "سنن ابن ماجه",
+            "ahmad": "مسند أحمد",
+            "malik": "موطأ مالك",
+            "darimi": "سنن الدارمي",
+        }
 
-    book_names = {
-        "bukhari": "صحيح البخاري",
-        "muslim": "صحيح مسلم",
-        "tirmidzi": "جامع الترمذي",
-        "abudaud": "سنن أبي داود",
-        "nasai": "سنن النسائي",
-        "ibnumajah": "سنن ابن ماجه",
-        "ahmad": "مسند أحمد",
-        "malik": "موطأ مالك",
-        "darimi": "سنن الدارمي",
-    }
+        embed = discord.Embed(
+            title=f"🕌 {book_names.get(book, book)} - حديث رقم {hadith_number}",
+            description=hadith.get("arab", "النص غير متوفر"),
+            color=discord.Color.gold(),
+        )
+        embed.set_footer(text=f"المصدر: {book_names.get(book, book)} (عبر api.hadith.gading.dev)")
+        return embed
 
-    embed = discord.Embed(
-        title=f"🕌 {book_names.get(book, book)} - حديث رقم {hadith_number}",
-        description=hadith.get("arab", "النص غير متوفر"),
-        color=discord.Color.gold(),
-    )
-    embed.set_footer(text=f"المصدر: {book_names.get(book, book)} (عبر api.hadith.gading.dev)")
-    return embed
+    @tasks.loop(minutes=SEND_INTERVAL_MINUTES)
+    async def send_reminder(self):
+        channel = self.bot.get_channel(CHANNEL_ID)
+        if channel is None:
+            print("⚠️ لم يتم العثور على الروم، تأكد من CHANNEL_ID وصلاحيات البوت.")
+            return
 
+        async with aiohttp.ClientSession() as session:
+            if self.send_reminder.current_loop % 2 == 0:
+                embed = await self.fetch_random_ayah(session)
+            else:
+                embed = await self.fetch_random_hadith(session)
 
-@tasks.loop(minutes=SEND_INTERVAL_MINUTES)
-async def send_reminder():
-    channel = bot.get_channel(CHANNEL_ID)
-    if channel is None:
-        print("⚠️ لم يتم العثور على الروم، تأكد من CHANNEL_ID وصلاحيات البوت.")
-        return
+            if embed:
+                try:
+                    await channel.send(embed=embed)
+                except discord.Forbidden:
+                    print("⚠️ البوت لا يملك صلاحية الإرسال في هذا الروم.")
+            else:
+                print("⚠️ تعذر جلب المحتوى من المصدر هذه المرة، سيُعاد المحاولة في الدورة القادمة.")
 
-    async with aiohttp.ClientSession() as session:
-        if send_reminder.current_loop % 2 == 0:
-            embed = await fetch_random_ayah(session)
-        else:
-            embed = await fetch_random_hadith(session)
-
-        if embed:
-            try:
-                await channel.send(embed=embed)
-            except discord.Forbidden:
-                print("⚠️ البوت لا يملك صلاحية الإرسال في هذا الروم.")
-        else:
-            print("⚠️ تعذر جلب المحتوى من المصدر هذه المرة، سيُعاد المحاولة في الدورة القادمة.")
+    @send_reminder.before_loop
+    async def before_send_reminder(self):
+        await self.bot.wait_until_ready()
 
 
-@send_reminder.before_loop
-async def before_send_reminder():
-    await bot.wait_until_ready()
-    await asyncio.sleep(5)
+async def setup(bot):
+    await bot.add_cog(QuranHadithCog(bot))
+
 
 DATA_FILE = 'bot_data.json'
 
