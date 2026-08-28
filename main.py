@@ -19,22 +19,20 @@ bot = commands.Bot(command_prefix="!", intents=intents)
 # ══════════════════════════════════════════════════════════════
 TOKEN = 'YOUR_BOT_TOKEN_HERE'
 # ══════════════════════════════════════════════════════════════
-CHANNEL_ID = 1541497958741311538  # آيدي الروم المطلوب
+import aiohttp
+import random
+import asyncio
+from discord.ext import tasks
 
-# أعلى درجة صحة: البخاري ومسلم فقط (الصحيحين)
-# يمكنك إضافة غيرها لاحقاً: "tirmidzi", "abudaud", "nasai", "ibnumajah", "ahmad", "malik", "darimi"
+CHANNEL_ID = 1541497958741311538
+
 HADITH_BOOKS = ["bukhari", "muslim"]
 
-TOTAL_AYAHS = 6236  # إجمالي عدد آيات القرآن الكريم
+TOTAL_AYAHS = 6236
 SEND_INTERVAL_MINUTES = 5
-
-# ============= إعداد البوت =============
-intents = discord.Intents.default()
-client = discord.Client(intents=intents)
 
 
 async def fetch_random_ayah(session: aiohttp.ClientSession) -> discord.Embed | None:
-    """جلب آية عشوائية من القرآن الكريم مع اسم السورة ورقم الآية."""
     ayah_number = random.randint(1, TOTAL_AYAHS)
     url = f"https://api.alquran.cloud/v1/ayah/{ayah_number}/quran-uthmani"
 
@@ -59,10 +57,8 @@ async def fetch_random_ayah(session: aiohttp.ClientSession) -> discord.Embed | N
 
 
 async def fetch_random_hadith(session: aiohttp.ClientSession) -> discord.Embed | None:
-    """جلب حديث عشوائي من أحد كتب الحديث المحددة في HADITH_BOOKS."""
     book = random.choice(HADITH_BOOKS)
 
-    # أولاً: معرفة عدد الأحاديث المتوفرة في الكتاب
     info_url = f"https://api.hadith.gading.dev/books/{book}"
     async with session.get(info_url) as resp:
         if resp.status != 200:
@@ -108,13 +104,12 @@ async def fetch_random_hadith(session: aiohttp.ClientSession) -> discord.Embed |
 
 @tasks.loop(minutes=SEND_INTERVAL_MINUTES)
 async def send_reminder():
-    channel = client.get_channel(CHANNEL_ID)
+    channel = bot.get_channel(CHANNEL_ID)
     if channel is None:
         print("⚠️ لم يتم العثور على الروم، تأكد من CHANNEL_ID وصلاحيات البوت.")
         return
 
     async with aiohttp.ClientSession() as session:
-        # بالتناوب: آية ثم حديث
         if send_reminder.current_loop % 2 == 0:
             embed = await fetch_random_ayah(session)
         else:
@@ -131,14 +126,9 @@ async def send_reminder():
 
 @send_reminder.before_loop
 async def before_send_reminder():
-    await client.wait_until_ready()
+    await bot.wait_until_ready()
+    await asyncio.sleep(5)
 
-
-@client.event
-async def on_ready():
-    print(f"✅ تم تسجيل الدخول باسم {client.user}")
-    if not send_reminder.is_running():
-        send_reminder.start()
 DATA_FILE = 'bot_data.json'
 
 def load_data():
