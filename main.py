@@ -782,6 +782,201 @@ async def unban_error(ctx, error):
         await ctx.send("**⚠️ الاستخدام الصحيح: فك [أيدي الشخص] [السبب اختياري]**\nمثال: `فك 123456789012345678 عفو عام`")
     elif isinstance(error, commands.BadArgument):
         await ctx.send("**⚠️ يرجى كتابة أيدي العضو بشكل أرقام صحيحة!**")
+import datetime
+import discord
+from discord.ext import commands
+
+# 1. أمر الطرد (طرد)
+@bot.command(name="طرد", aliases=["kick"])
+@commands.has_permissions(kick_members=True)
+async def kick_member(ctx, member: discord.Member, *, reason: str = "بدون سبب"):
+    try:
+        await member.kick(reason=reason)
+        await ctx.send(f"**👢 تم طرد {member.mention} من السيرفر بنجاح! | السبب: {reason}**")
+    except discord.Forbidden:
+        await ctx.send("**❌ ما أقدر أطرد هذا الشخص، رتبته أعلى مني أو صلاحياتي ناقصة!**")
+    except Exception as e:
+        await ctx.send(f"**❌ صار فيه خطأ: {e}**")
+
+@kick_member.error
+async def kick_error(ctx, error):
+    if isinstance(error, commands.MissingPermissions):
+        await ctx.send("**❌ ما عندك صلاحية Kick Members عشان تستخدم هالأمر!**")
+    elif isinstance(error, commands.MissingRequiredArgument):
+        await ctx.send("**⚠️ الاستخدام الصحيح: طرد @الشخص [السبب اختياري]**")
+
+
+# 2. أمر مسح الرسائل (مسح)
+@bot.command(name="مسح", aliases=["clear", "purge"])
+@commands.has_permissions(manage_messages=True)
+async def clear_messages(ctx, amount: int = 10):
+    if amount <= 0:
+        await ctx.send("**❌ يرجى كتابة عدد أكبر من الصفر!**")
+        return
+    try:
+        deleted = await ctx.channel.purge(limit=amount + 1)
+        msg = await ctx.send(f"**🗑️ تم حذف {len(deleted) - 1} رسالة بنجاح!**")
+        await discord.utils.sleep_until(datetime.datetime.utcnow() + datetime.timedelta(seconds=3))
+        await msg.delete()
+    except discord.Forbidden:
+        await ctx.send("**❌ صلاحياتي ناقصة لحذف الرسائل (Manage Messages)!**")
+    except Exception as e:
+        await ctx.send(f"**❌ صار فيه خطأ: {e}**")
+
+@clear_messages.error
+async def clear_error(ctx, error):
+    if isinstance(error, commands.MissingPermissions):
+        await ctx.send("**❌ ما عندك صلاحية Manage Messages عشان تستخدم هالأمر!**")
+    elif isinstance(error, commands.BadArgument):
+        await ctx.send("**⚠️ يرجى كتابة الرقم بشكل صحيح! (مثال: مسح 50)**")
+
+
+# 3. أمر معلومات السيرفر (سيرفر)
+@bot.command(name="سيرفر", aliases=["serverinfo"])
+async def server_info(ctx):
+    guild = ctx.guild
+    embed = discord.Embed(
+        title=f"📊 معلومات سيرفر: {guild.name}",
+        color=discord.Color.blue(),
+        timestamp=datetime.datetime.now()
+    )
+    if guild.icon:
+        embed.set_thumbnail(url=guild.icon.url)
+    
+    embed.add_field(name="👑 صاحب السيرفر", value=f"{guild.owner.mention}" if guild.owner else "غير معروف", inline=True)
+    embed.add_field(name="👥 الأعضاء", value=f"إجمالي: {guild.member_count}", inline=True)
+    embed.add_field(name="📅 تاريخ الإنشاء", value=f"<t:{int(guild.created_at.timestamp())}:R>", inline=True)
+    embed.add_field(name="💬 الرومات", value=f"كتابية: {len(guild.text_channels)} | صوتية: {len(guild.voice_channels)}", inline=True)
+    embed.add_field(name="🛡️ الرتب", value=f"{len(guild.roles)} رتبة", inline=True)
+    embed.add_field(name="🌍 التعديلات/المستوى", value=f"Level {guild.premium_tier} (Boosts: {guild.premium_subscription_count})", inline=True)
+    
+    await ctx.send(embed=embed)
+
+
+# 4. أمر معلومات العضو (من)
+@bot.command(name="من", aliases=["whois", "userinfo"])
+async def user_info(ctx, member: discord.Member = None):
+    member = member or ctx.author
+    roles = [role.mention for role in member.roles if role != ctx.guild.default_role]
+    roles_str = ", ".join(roles) if roles else "لا توجد رتب"
+    
+    embed = discord.Embed(
+        title=f"👤 معلومات عن: {member.name}",
+        color=member.color,
+        timestamp=datetime.datetime.now()
+    )
+    if member.avatar:
+        embed.set_thumbnail(url=member.avatar.url)
+        
+    embed.add_field(name="🆔 الأيدي", value=member.id, inline=True)
+    embed.add_field(name="🏷️ الاسم المستعار", value=member.nick or "بدون", inline=True)
+    embed.add_field(name="📥 تاريخ الانضمام للسيرفر", value=f"<t:{int(member.joined_at.timestamp())}:R>" if member.joined_at else "غير معروف", inline=True)
+    embed.add_field(name="📅 تاريخ إنشاء الحساب", value=f"<t:{int(member.created_at.timestamp())}:R>", inline=True)
+    embed.add_field(name=f"🎭 الرتب ({len(roles)})", value=roles_str, inline=False)
+    
+    await ctx.send(embed=embed)
+
+
+# قاعدة بيانات مؤقتة لتخزين التحذيرات
+warnings_db = {}
+
+# 5. أمر التحذير (تحذير @الشخص السبب)
+@bot.command(name="تحذير", aliases=["warn"])
+@commands.has_permissions(manage_messages=True)
+async def warn_member(ctx, member: discord.Member, *, reason: str = "بدون سبب"):
+    if member.id not in warnings_db:
+        warnings_db[member.id] = []
+    
+    warn_data = {
+        "reason": reason,
+        "moderator": ctx.author.name,
+        "time": datetime.datetime.now().strftime("%Y-%m-%d %H:%M"),
+        "message_link": ctx.message.jump_url
+    }
+    warnings_db[member.id].append(warn_data)
+    
+    await ctx.send(f"**⚠️ تم تحذير {member.mention} بنجاح! | السبب: {reason}**")
+    try:
+        await member.send(f"**⚠️ لقد تم تحذيرك في سيرفر {ctx.guild.name} | السبب: {reason}**")
+    except:
+        pass
+
+@warn_member.error
+async def warn_error(ctx, error):
+    if isinstance(error, commands.MissingPermissions):
+        await ctx.send("**❌ ما عندك صلاحية لإدارة الرسائل عشان تحذر الأعضاء!**")
+    elif isinstance(error, commands.MissingRequiredArgument):
+        await ctx.send("**⚠️ الاستخدام الصحيح: تحذير @الشخص [السبب]**")
+
+
+# 6. أمر عرض التحذيرات بإمبد مرتب (تحذيرات @الشخص)
+@bot.command(name="تحذيرات", aliases=["warnings"])
+async def show_warnings(ctx, member: discord.Member):
+    user_warns = warnings_db.get(member.id, [])
+    
+    embed = discord.Embed(
+        title=f"⚠️ سجل تحذيرات العضو: {member.name}",
+        color=discord.Color.orange(),
+        timestamp=datetime.datetime.now()
+    )
+    if member.avatar:
+        embed.set_thumbnail(url=member.avatar.url)
+        
+    if not user_warns:
+        embed.description = "هذا الشخص نظيف وليس لديه أي تحذيرات! 🎉"
+    else:
+        for idx, w in enumerate(user_warns, 1):
+            embed.add_field(
+                name=f"التحذير رقم {idx}",
+                value=f"**السبب:** {w['reason']}\n**المشرف:** {w['moderator']}\n**الوقت:** {w['time']}\n[🔗 رابط رسالة التحذير]({w['message_link']})",
+                inline=False
+            )
+            
+    await ctx.send(embed=embed)
+
+
+# 7. أمر إزالة تحذير معين (إزالة @الشخص رقم_التحذير)
+@bot.command(name="إزالة", aliases=["delwarn", "removewarn"])
+@commands.has_permissions(manage_messages=True)
+async def remove_warning(ctx, member: discord.Member, index: int):
+    user_warns = warnings_db.get(member.id, [])
+    if not user_warns or index < 1 or index > len(user_warns):
+        await ctx.send("**❌ رقم التحذير غير صحيح أو العضو ليس لديه تحذيرات بهذا الرقم!**")
+        return
+        
+    removed = user_warns.pop(index - 1)
+    await ctx.send(f"**✅ تم حذف التحذير رقم {index} عن العضو {member.mention} بنجاح.**")
+
+@remove_warning.error
+async def remove_warning_error(ctx, error):
+    if isinstance(error, commands.MissingRequiredArgument):
+        await ctx.send("**⚠️ الاستخدام الصحيح: إزالة @الشخص [رقم التحذير]**\nمثال: `إزالة @محمود 1`")
+
+
+# 8. أمر تغيير الاسم أو إرجاعه (اسم @الشخص [الاسم الجديد أو اتركه فاضي])
+@bot.command(name="اسم", aliases=["nick", "nickname"])
+@commands.has_permissions(manage_nicknames=True)
+async def change_nickname(ctx, member: discord.Member, *, new_name: str = None):
+    try:
+        # إذا كتب اسم جديد يغيره، وإذا ما كتب شي يخليه None عشان يرجع لاسمه الطبيعي
+        nickname_to_set = None if new_name and new_name.lower() == "none" else new_name
+        await member.edit(nick=nickname_to_set)
+        
+        if nickname_to_set:
+            await ctx.send(f"**✏️ تم تغيير اسم {member.mention} إلى `{nickname_to_set}` بنجاح!**")
+        else:
+            await ctx.send(f"**🔄 تم إرجاع اسم {member.mention} إلى اسمه الطبيعي الأصلي!**")
+    except discord.Forbidden:
+        await ctx.send("**❌ ما أقدر أغير اسم هذا الشخص، رتبته أعلى مني أو صلاحياتي ناقصة!**")
+    except Exception as e:
+        await ctx.send(f"**❌ صار فيه خطأ: {e}**")
+
+@change_nickname.error
+async def change_nickname_error(ctx, error):
+    if isinstance(error, commands.MissingPermissions):
+        await ctx.send("**❌ ما عندك صلاحية Manage Nicknames عشان تستخدم هالأمر!**")
+    elif isinstance(error, commands.MissingRequiredArgument):
+        await ctx.send("**⚠️ الاستخدام الصحيح:**\n`اسم @الشخص أحمد` (لتغيير اسمه)\n`اسم @الشخص` (لإرجاعه لاسمه الأصلي)")
 
 # تشغيل البوت
 import os
