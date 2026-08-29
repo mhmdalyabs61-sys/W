@@ -983,6 +983,233 @@ async def remove_warning_error(ctx, error):
 
 
 
+import datetime
+import discord
+from discord.ext import commands
+
+# ==================== إعدادات السجن ====================
+JAIL_CHANNEL_ID = 1541443194443669604
+JAIL_ROLE_ID = 1541443299590541323
+
+# قواعد البيانات المؤقتة
+saved_roles_db = {}
+current_prisoners_db = {}
+jail_history_db = {}
+
+
+# ==================== 1. أمر قفل الروم (ق) ====================
+@bot.command(name="ق", aliases=["lock"])
+@commands.has_permissions(manage_channels=True)
+async def lock_channel(ctx):
+    try:
+        await ctx.channel.set_permissions(ctx.guild.default_role, send_messages=False)
+        await ctx.send("**🔒 تم قفل الروم بنجاح! لا يمكن للأعضاء الكتابة هنا الآن.**")
+    except discord.Forbidden:
+        await ctx.send("**❌ ليس لدي صلاحية إدارة الرومات (Manage Channels)!**")
+    except Exception as e:
+        await ctx.send(f"**❌ صار فيه خطأ: {e}**")
+
+@lock_channel.error
+async def lock_error(ctx, error):
+    if isinstance(error, commands.MissingPermissions):
+        await ctx.send("**❌ ما عندك صلاحية Manage Channels عشان تقفل الروم!**")
+
+
+# ==================== 2. أمر فتح الروم (ف) ====================
+@bot.command(name="ف", aliases=["unlock"])
+@commands.has_permissions(manage_channels=True)
+async def unlock_channel(ctx):
+    try:
+        await ctx.channel.set_permissions(ctx.guild.default_role, send_messages=True)
+        await ctx.send("**🔓 تم فتح الروم بنجاح! يمكن للأعضاء الكتابة الآن.**")
+    except discord.Forbidden:
+        await ctx.send("**❌ ليس لدي صلاحية إدارة الرومات (Manage Channels)!**")
+    except Exception as e:
+        await ctx.send(f"**❌ صار فيه خطأ: {e}**")
+
+@unlock_channel.error
+async def unlock_error(ctx, error):
+    if isinstance(error, commands.MissingPermissions):
+        await ctx.send("**❌ ما عندك صلاحية Manage Channels عشان تفتح الروم!**")
+
+
+# ==================== 3. أمر السجن (سجن) ====================
+@bot.command(name="سجن", aliases=["jail"])
+@commands.has_permissions(administrator=True)
+async def jail_member(ctx, member: discord.Member, *, reason: str = "بدون سبب"):
+    if ctx.author != ctx.guild.owner and member.top_role >= ctx.author.top_role:
+        await ctx.send("**❌ ما يمكنك سجن شخص رتبته أعلى منك أو مساوية لرتبتك!**")
+        return
+        
+    jail_role = ctx.guild.get_role(JAIL_ROLE_ID)
+    jail_channel = ctx.guild.get_channel(JAIL_CHANNEL_ID)
+    
+    if not jail_role or not jail_channel:
+        await ctx.send("**❌ تأكد من صحة أيدي رتبه السجن أو أيدي روم السجن في الكود!**")
+        return
+
+    try:
+        # حفظ رتب العضو وسحبها وإعطائه رتبة سجين فقط
+        user_roles = [role for role in member.roles if role != ctx.guild.default_role]
+        saved_roles_db[member.id] = user_roles
+        
+        await member.remove_roles(*user_roles, reason=f"سجن بواسطة: {ctx.author.name}")
+        await member.add_roles(jail_role, reason=reason)
+        
+        # نقله لروم السجن الصوتي إذا كان متصلاً بصوت
+        if member.voice and member.voice.channel:
+            try:
+                await member.move_to(jail_channel, reason="سجن العضو")
+            except:
+                pass
+                
+        jail_time_obj = datetime.datetime.now()
+        current_prisoners_db[member.id] = {
+            "reason": reason,
+            "moderator": ctx.author.name,
+            "time_obj": jail_time_obj,
+            "time_str": jail_time_obj.strftime("%Y-%m-%d %H:%M")
+        }
+        
+        if member.id not in jail_history_db:
+            jail_history_db[member.id] = []
+        jail_history_db[member.id].append({
+            "reason": reason,
+            "moderator": ctx.author.name,
+            "time": jail_time_obj.strftime("%Y-%m-%d %H:%M")
+        })
+                
+        await ctx.send(f"**🔒 تم سجن {member.mention} بنجاح! | السبب: {reason}**")
+        try:
+            await member.send(f"**🔒 لقد تم سجنك في سيرفر {ctx.guild.name} | السبب: {reason}**")
+        except:
+            pass
+    except discord.Forbidden:
+        await ctx.send("**❌ صلاحياتي ناقصة لا أستطيع تعديل رتب هذا الشخص!**")
+    except Exception as e:
+        await ctx.send(f"**❌ صار فيه خطأ: {e}**")
+
+@jail_member.error
+async def jail_error(ctx, error):
+    if isinstance(error, commands.MissingPermissions):
+        await ctx.send("**❌ الأمر محظور! يتطلب صلاحية Administrator (مسؤول) لتنفيذه.**")
+    elif isinstance(error, commands.MissingRequiredArgument):
+        await ctx.send("**⚠️ الاستخدام الصحيح: سجن @الشخص [السبب اختياري]**")
+
+
+# ==================== 4. أمر الإفراج (افراج) ====================
+@bot.command(name="افراج", aliases=["unjail"])
+@commands.has_permissions(administrator=True)
+async def unjail_member(ctx, member: discord.Member, *, reason: str = "بدون سبب"):
+    if ctx.author != ctx.guild.owner and member.top_role >= ctx.author.top_role:
+        await ctx.send("**❌ ما يمكنك فك سجن شخص رتبته أعلى منك أو مساوية لرتبتك!**")
+        return
+        
+    jail_role = ctx.guild.get_role(JAIL_ROLE_ID)
+    if not jail_role:
+        await ctx.send("**❌ رتبه السجن غير موجودة أو الأيدي خطأ!**")
+        return
+
+    try:
+        await member.remove_roles(jail_role, reason=reason)
+        
+        # استرجاع رتب العضو القديمة
+        if member.id in saved_roles_db:
+            old_roles = saved_roles_db.pop(member.id)
+            valid_roles = [r for r in old_roles if r.guild == ctx.guild]
+            if valid_roles:
+                await member.add_roles(*valid_roles, reason="استرجاع الرتب بعد الإفراج")
+            
+        if member.id in current_prisoners_db:
+            current_prisoners_db.pop(member.id)
+            
+        await ctx.send(f"**🔓 تم الإفراج عن {member.mention} بنجاح واسترجاع رتبه! | السبب: {reason}**")
+        try:
+            await member.send(f"**🔓 لقد تم الإفراج عنك في سيرفر {ctx.guild.name} | السبب: {reason}**")
+        except:
+            pass
+    except discord.Forbidden:
+        await ctx.send("**❌ صلاحياتي ناقصة لا أستطيع تعديل رتب هذا الشخص!**")
+    except Exception as e:
+        await ctx.send(f"**❌ صار فيه خطأ: {e}**")
+
+@unjail_member.error
+async def unjail_error(ctx, error):
+    if isinstance(error, commands.MissingPermissions):
+        await ctx.send("**❌ الأمر محظور! يتطلب صلاحية Administrator (مسؤول) لتنفيذه.**")
+    elif isinstance(error, commands.MissingRequiredArgument):
+        await ctx.send("**⚠️ الاستخدام الصحيح: افراج @الشخص [السبب اختياري]**")
+
+
+# ==================== 5. أمر القضايا (القضايا) ====================
+@bot.command(name="القضايا", aliases=["cases", "prisoners"])
+@commands.has_permissions(administrator=True)
+async def show_cases(ctx, member: discord.Member = None):
+    if member:
+        history = jail_history_db.get(member.id, [])
+        is_currently_jailed = member.id in current_prisoners_db
+        
+        embed = discord.Embed(
+            title=f"⚖️ ملف القضايا والسوابق: {member.name}",
+            color=discord.Color.red() if is_currently_jailed else discord.Color.green(),
+            timestamp=datetime.datetime.now()
+        )
+        if member.avatar:
+            embed.set_thumbnail(url=member.avatar.url)
+            
+        embed.add_field(name="🚨 الحالة الحالية", value="مسجون حالياً 🔒" if is_currently_jailed else "خارج السجن 🟢", inline=False)
+        embed.add_field(name="📂 عدد السوابق الكلي", value=f"{len(history)} مرة", inline=False)
+        
+        if not history:
+            embed.description = "هذا الشخص سجله نظيف وليس لديه أي سوابق سجن سابقة! ✨"
+        else:
+            for idx, h in enumerate(history, 1):
+                embed.add_field(
+                    name=f"السابقة رقم {idx}",
+                    value=f"**السبب:** {h['reason']}\n**المسؤول:** {h['moderator']}\n**وقت السجن:** {h['time']}",
+                    inline=False
+                )
+        await ctx.send(embed=embed)
+        
+    else:
+        embed = discord.Embed(
+            title="📋 قائمة السجناء الحاليين في السجن",
+            color=discord.Color.dark_red(),
+            timestamp=datetime.datetime.now()
+        )
+        
+        if not current_prisoners_db:
+            embed.description = "لا توجد أي قضايا نشطة حالياً، السجن خالي تماماً! 🎉"
+        else:
+            now = datetime.datetime.now()
+            for uid, data in current_prisoners_db.items():
+                user = ctx.guild.get_member(uid)
+                username = user.name if user else f"أيدي: {uid}"
+                mention = user.mention if user else f"`{uid}`"
+                
+                diff = now - data["time_obj"]
+                days = diff.days
+                hours, remainder = divmod(diff.seconds, 3600)
+                minutes, _ = divmod(remainder, 60)
+                
+                duration_str = ""
+                if days > 0:
+                    duration_str += f"{days} يوم "
+                if hours > 0:
+                    duration_str += f"{hours} ساعة "
+                duration_str += f"{minutes} دقيقة"
+                
+                embed.add_field(
+                    name=f"👤 {username}",
+                    value=f"**مينشن:** {mention}\n**السبب:** {data['reason']}\n**المسؤول:** {data['moderator']}\n**تاريخ الدخول:** {data['time_str']}\n**مدة التواجد:** {duration_str}",
+                    inline=False
+                )
+        await ctx.send(embed=embed)
+
+@show_cases.error
+async def show_cases_error(ctx, error):
+    if isinstance(error, commands.MissingPermissions):
+        await ctx.send("**❌ الأمر محظور! يتطلب صلاحية Administrator (مسؤول) لعرض القضايا والسجناء.**")
 
 # تشغيل البوت
 import os
