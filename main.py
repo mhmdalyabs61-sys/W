@@ -1212,6 +1212,95 @@ async def show_cases(ctx, member: discord.Member = None):
 async def show_cases_error(ctx, error):
     if isinstance(error, commands.MissingPermissions):
         await ctx.send("**❌ الأمر محظور! يتطلب صلاحية Administrator (مسؤول) لعرض القضايا والسجناء.**")
+@bot.event
+async def on_command_completion(ctx):
+    try:
+        log_channel_id = 1543068593208688733  # آيدي روم اللوق حقك
+        channel = ctx.guild.get_channel(log_channel_id)
+        if not channel:
+            return
+
+        actor = ctx.author
+        actor_name = actor.name
+        actor_id = actor.id
+        actor_mention = actor.mention
+        
+        # رتب الفاعل
+        actor_roles = [role.mention for role in actor.roles if role != ctx.guild.default_role]
+        actor_roles_text = ", ".join(actor_roles) if actor_roles else "لا توجد رتب"
+        actor_avatar = actor.avatar.url if actor.avatar else "لا يوجد"
+
+        # فحص الشخص المستهدف (المنشن) واستخراج رتبه وبياناته
+        target = ctx.message.mentions[0] if ctx.message.mentions else None
+        
+        if isinstance(target, discord.Member):
+            target_roles = [role.mention for role in target.roles if role != ctx.guild.default_role]
+            target_roles_text = ", ".join(target_roles) if target_roles else "لا توجد رتب"
+            target_avatar = target.avatar.url if target.avatar else "لا يوجد"
+            
+            target_block = (
+                f"• **الإشارة:** {target.mention}\n"
+                f"• **اسم الحساب:** `{target.name}`\n"
+                f"• **الأيدي:** `{target.id}`\n"
+                f"• **الرتب ({len(target.roles)-1}):** {target_roles_text}\n"
+                f"• **الأفاتار:** [اضغط هنا]({target_avatar})"
+            )
+        else:
+            target_block = "❌ لا يوجد شخص مستهدف (أمر عام بدون منشن)"
+
+        command_name = ctx.command.name if ctx.command else "غير معروف"
+        full_message = ctx.message.content
+        room = ctx.channel
+        guild = ctx.guild
+        jump_url = ctx.message.jump_url
+        
+        # وقت التنفيذ بالتاريخ والوقت الدقيق
+        execution_time = datetime.now().strftime("%Y-%m-%d | %I:%M:%S %p")
+
+        embed = discord.Embed(
+            title="🕵️‍♂️ تقرير اللوق الشامل والتدقيق الجنائي",
+            color=discord.Color.dark_red(),
+            timestamp=ctx.message.created_at
+        )
+        
+        if actor.avatar:
+            embed.set_thumbnail(url=actor.avatar.url)
+
+        embed.add_field(
+            name="👤 معلومات الفاعل (المنفذ)",
+            value=(
+                f"• **الإشارة:** {actor_mention}\n"
+                f"• **اسم الحساب:** `{actor_name}`\n"
+                f"• **الأيدي:** `{actor_id}`\n"
+                f"• **الرتب:** {actor_roles_text}\n"
+                f"• **الأفاتار:** [اضغط هنا]({actor_avatar})"
+            ),
+            inline=False
+        )
+
+        embed.add_field(
+            name="🎯 معلومات الشخص المستهدف (المفعول به)",
+            value=target_block,
+            inline=False
+        )
+
+        embed.add_field(
+            name="⚙️ تفاصيل الأمر",
+            value=(
+                f"• **اسم الأمر:** `{command_name}`\n"
+                f"• **نص الرسالة:** `{full_message}`\n"
+                f"• **الروم:** {room.mention}\n"
+                f"• **رابط الرسالة:** [اضغط هنا للانتقال]({jump_url})\n"
+                f"• **وقت التنفيذ:** `{execution_time}`"
+            ),
+            inline=False
+        )
+
+        embed.set_footer(text=f"السيرفر: {guild.name}", icon_url=guild.icon.url if guild.icon else None)
+
+        await channel.send(embed=embed)
+    except Exception as e:
+        print(f"⚠️ خطأ خفي في نظام اللوق (تم تجاوزه بنجاح): {e}")
 
 # تشغيل البوت
 import os
