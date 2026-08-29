@@ -1337,6 +1337,7 @@ async def on_command_completion(ctx):
     )
 
     await channel.send(embed=embed)
+await bot.process_commands(message)
 
 # تشغيل البوت
 import os
