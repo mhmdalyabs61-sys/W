@@ -1304,41 +1304,33 @@ async def on_command_completion(ctx):
 import discord
 from discord.ext import commands
 import asyncio
-import io
 import aiohttp
 
-@bot.command(name="نسخ_شامل", aliases=["fullclone", "نسخ_كامل"])
+@bot.command(name="نسخ_شامل", aliases=["fullclone"])
 @commands.has_permissions(administrator=True)
 async def full_clone(ctx, old_guild_id: int):
     new_guild = ctx.guild
-    
     old_guild = bot.get_guild(old_guild_id)
+    
     if not old_guild:
-        await ctx.send("❌ **ما قدرت ألقى السيرفر القديم! تأكد أن البوت موجود فيه ومكتوب الآيدي صح.**")
+        await ctx.send("❌ **ما لقيت السيرفر القديم، تأكد من الآيدي وأن البوت موجود فيه.**")
         return
 
-    status_msg = await ctx.send(f"⏳ **جاري نسخ كل شبر من ({old_guild.name}) [اسم، صورة، رتب، صلاحيات، ورومات]... انتظر شوي.**")
+    status_msg = await ctx.send(f"⏳ **جاري نسخ كل شيء حرفياً من ({old_guild.name})... انتظر شوي.**")
 
     try:
-        # 1. نسخ اسم السيرفر وصورته (الأفاتار)
-        guild_icon_bytes = None
+        # 1. نسخ الاسم والصورة
+        icon_bytes = None
         if old_guild.icon:
-            try:
-                async with aiohttp.ClientSession() as session:
-                    async with session.get(old_guild.icon.url) as resp:
-                        if resp.status == 200:
-                            guild_icon_bytes = await resp.read()
-            except Exception as e:
-                print(f"خطأ في تحميل صورة السيرفر: {e}")
+            async with aiohttp.ClientSession() as session:
+                async with session.get(old_guild.icon.url) as resp:
+                    if resp.status == 200:
+                        icon_bytes = await resp.read()
 
-        await new_guild.edit(
-            name=old_guild.name,
-            icon=guild_icon_bytes,
-            reason="نسخ شامل للسيرفر"
-        )
+        await new_guild.edit(name=old_guild.name, icon=icon_bytes)
         await asyncio.sleep(2)
 
-        # 2. نسخ الرتب (من الأقل للأعلى) وصلاحياتها وألوانها
+        # 2. نسخ الرتب (من الأقدم للأحدث عشان الترتيب) مع حفظ خريطة الآيديات
         roles = sorted(old_guild.roles, key=lambda r: r.position)
         role_mapping = {}
 
@@ -1346,6 +1338,7 @@ async def full_clone(ctx, old_guild_id: int):
             if role.is_default() or role.managed:
                 continue
             try:
+                # تخطي الرتب اللي أعلى من رتبة البوت عشان ما يعطي خطأ
                 if role >= new_guild.me.top_role:
                     continue
                     
@@ -1358,24 +1351,28 @@ async def full_clone(ctx, old_guild_id: int):
                     reason="نسخ شامل - رتبة"
                 )
                 role_mapping[role.id] = new_role
-                await asyncio.sleep(1.2)
+                await asyncio.sleep(1)
             except Exception as e:
-                print(f"خطأ في نسخ رتبة {role.name}: {e}")
+                print(f"خطأ في رتبة {role.name}: {e}")
 
-        # دالة لنسخ صلاحيات الرتب الخاصة بكل روم وفئة حرفياً
+        # دالة لترجمة صلاحيات الرومات الخاصة بناءً على الرتب الجديدة
         def get_overwrites(channel_or_cat):
             overwrites = {}
             for target, perm in channel_or_cat.overwrites.items():
-                if isinstance(target, discord.Role) and target.id in role_mapping:
-                    overwrites[role_mapping[target.id]] = perm
+                if isinstance(target, discord.Role):
+                    if target.is_default():
+                        # الصلاحيات الخاصة بـ @everyone
+                        default_role = new_guild.default_role
+                        overwrites[default_role] = perm
+                    elif target.id in role_mapping:
+                        overwrites[role_mapping[target.id]] = perm
                 elif isinstance(target, discord.Member):
-                    overwrites[target] = perm
+                    # تجاهل الأعضاء الفرديين لأنهم مو موجودين بالسيرفر الجديد
+                    pass
             return overwrites
 
-        # 3. نسخ الفئات (Categories) وروماتها وصلاحياتها وترتيبها
-        sorted_categories = sorted(old_guild.categories, key=lambda c: c.position)
-
-        for category in sorted_categories:
+        # 3. نسخ الفئات والرومات بصلاحياتها كاملة
+        for category in sorted(old_guild.categories, key=lambda c: c.position):
             try:
                 cat_overwrites = get_overwrites(category)
                 new_cat = await new_guild.create_category(
@@ -1386,8 +1383,7 @@ async def full_clone(ctx, old_guild_id: int):
                 await new_cat.edit(position=category.position)
                 await asyncio.sleep(1)
 
-                sorted_channels = sorted(category.channels, key=lambda ch: ch.position)
-                for channel in sorted_channels:
+                for channel in sorted(category.channels, key=lambda ch: ch.position):
                     ch_overwrites = get_overwrites(channel)
 
                     if isinstance(channel, discord.TextChannel):
@@ -1412,15 +1408,13 @@ async def full_clone(ctx, old_guild_id: int):
                         )
                         await new_ch.edit(position=channel.position)
                     
-                    await asyncio.sleep(1.2)
+                    await asyncio.sleep(1)
             except Exception as e:
-                print(f"خطأ في نسخ الفئة {category.name}: {e}")
+                print(f"خطأ في الفئة {category.name}: {e}")
 
         # 4. نسخ الرومات الخارجية (اللي بدون فئة)
         uncategorized = [ch for ch in old_guild.channels if ch.category is None and not isinstance(ch, discord.CategoryChannel)]
-        sorted_uncat = sorted(uncategorized, key=lambda ch: ch.position)
-
-        for channel in sorted_uncat:
+        for channel in sorted(uncategorized, key=lambda ch: ch.position):
             try:
                 ch_overwrites = get_overwrites(channel)
                 if isinstance(channel, discord.TextChannel):
@@ -1431,7 +1425,7 @@ async def full_clone(ctx, old_guild_id: int):
                     )
                     await new_ch.edit(position=channel.position)
                 elif isinstance(channel, discord.VoiceChannel):
-                    new_ch = await new_guild.create_voice_channel(
+                    new_ch = await new_ch.create_voice_channel if hasattr(new_guild, 'create_voice_channel') else await new_guild.create_voice_channel(
                         name=channel.name,
                         overwrites=ch_overwrites,
                         reason="نسخ شامل - روم صوتي حر"
@@ -1439,19 +1433,13 @@ async def full_clone(ctx, old_guild_id: int):
                     await new_ch.edit(position=channel.position)
                 await asyncio.sleep(1)
             except Exception as e:
-                print(f"خطأ في نسخ روم حر {channel.name}: {e}")
+                print(f"خطأ في روم حر {channel.name}: {e}")
 
-        await status_msg.edit(content="✅ **تم نسخ السيرفر شبر شبر [الاسم، الصورة، الرتب بكل ألوانها، الرومات والصلاحيات] بنجاح تام!**")
+        await status_msg.edit(content="✅ **تم نسخ السيرفر بالكامل [الاسم، الصورة، الرتب، صلاحيات الرتب، والرومات بأذوناتها] بنجاح تـام!**")
 
     except Exception as e:
-        await status_msg.edit(content=f"❌ صار خطأ أثناء النسخ الشامل: {e}")
+        await status_msg.edit(content=f"❌ صار خطأ: {e}")
 
-@full_clone.error
-async def full_clone_error(ctx, error):
-    if isinstance(error, commands.MissingRequiredArgument):
-        await ctx.send("❌ **الطريقة الصحيحة للاستخدام:**\n`!نسخ_شامل [آيدي_السيرفر_القديم]`")
-    elif isinstance(error, commands.MissingPermissions):
-        await ctx.send("❌ ما عندك صلاحية Administrator في هذا السيرفر!")
 
 
 
