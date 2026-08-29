@@ -1337,7 +1337,14 @@ async def on_command_completion(ctx):
     )
 
     await channel.send(embed=embed)
-await bot.process_commands(message)
+@bot.event
+async def on_message(message):
+    if message.author.bot:
+        return
+    
+    # السطر لازم يكون هنا بداخل الدالة تماماً
+    await bot.process_commands(message)
+
 
 # تشغيل البوت
 import os
