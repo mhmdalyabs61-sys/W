@@ -1301,6 +1301,130 @@ async def on_command_completion(ctx):
         await channel.send(embed=embed)
     except Exception as e:
         print(f"⚠️ خطأ خفي في نظام اللوق (تم تجاوزه بنجاح): {e}")
+import discord
+from discord.ext import commands
+import asyncio
+
+@bot.command(name="نسخ", aliases=["clone", "copyserver"])
+@commands.has_permissions(administrator=True)
+async def clone_server(ctx):
+    guild = ctx.guild
+    await ctx.send("⏳ **جاري نسخ الرتب والرومات بكل الفئات وبنفس الترتيب الدقيق... يرجى الانتظار.**")
+
+    try:
+        # 1. نسخ الرتب (من الأقل للأعلى عشان الترتيب ما يتلخبط)
+        roles = sorted(guild.roles, key=lambda r: r.position)
+        role_mapping = {}  # لربط رتب السيرفر الأصلي بالرتب الجديدة
+
+        for role in roles:
+            if role.is_default() or role.managed:
+                continue
+            try:
+                new_role = await guild.create_role(
+                    name=role.name,
+                    permissions=role.permissions,
+                    color=role.color,
+                    hoist=role.hoist,
+                    mentionable=role.mentionable,
+                    reason="نسخ السيرفر - ترتيب الرتب"
+                )
+                role_mapping[role.id] = new_role
+                await asyncio.sleep(1.2)  # فاصل زمني لتفادي الباند
+            except Exception as e:
+                print(f"خطأ في نسخ رتبة {role.name}: {e}")
+
+        # دالة مساعدة لنسخ الأذونات لكل روم وفئة
+        def get_overwrites(channel_or_cat):
+            overwrites = {}
+            for target, perm in channel_or_cat.overwrites.items():
+                if isinstance(target, discord.Role) and target.id in role_mapping:
+                    overwrites[role_mapping[target.id]] = perm
+                elif isinstance(target, discord.Member):
+                    overwrites[target] = perm
+            return overwrites
+
+        # 2. جلب جميع الفئات وترتيبها حسب ظهورها في السيرفر
+        sorted_categories = sorted(guild.categories, key=lambda c: c.position)
+
+        for category in sorted_categories:
+            try:
+                cat_overwrites = get_overwrites(category)
+                new_cat = await guild.create_category(
+                    name=category.name,
+                    overwrites=cat_overwrites,
+                    reason="نسخ السيرفر - الفئات"
+                )
+                # ضبط ترتيب الفئة في السيرفر الجديد
+                await new_cat.edit(position=category.position)
+                await asyncio.sleep(1)
+
+                # جلب الرومات التابعة لهذه الفئة وترتيبها الصحيح
+                sorted_channels = sorted(category.channels, key=lambda ch: ch.position)
+                for channel in sorted_channels:
+                    ch_overwrites = get_overwrites(channel)
+
+                    if isinstance(channel, discord.TextChannel):
+                        new_ch = await guild.create_text_channel(
+                            name=channel.name,
+                            category=new_cat,
+                            overwrites=ch_overwrites,
+                            topic=channel.topic,
+                            slowmode_delay=channel.slowmode_delay,
+                            nsfw=channel.nsfw,
+                            reason="نسخ السيرفر - روم كتابي"
+                        )
+                        await new_ch.edit(position=channel.position)
+                    elif isinstance(channel, discord.VoiceChannel):
+                        new_ch = await guild.create_voice_channel(
+                            name=channel.name,
+                            category=new_cat,
+                            overwrites=ch_overwrites,
+                            bitrate=channel.bitrate,
+                            user_limit=channel.user_limit,
+                            reason="نسخ السيرفر - روم صوتي"
+                        )
+                        await new_ch.edit(position=channel.position)
+                    
+                    await asyncio.sleep(1.2)
+
+            except Exception as e:
+                print(f"خطأ في نسخ الفئة أو روماتها {category.name}: {e}")
+
+        # 3. نسخ الرومات التي بدون فئة (خارج الكاتيجوري) وترتيبها
+        uncategorized_channels = [ch for ch in guild.channels if ch.category is None and not isinstance(ch, discord.CategoryChannel)]
+        sorted_uncat = sorted(uncategorized_channels, key=lambda ch: ch.position)
+
+        for channel in sorted_uncat:
+            try:
+                ch_overwrites = get_overwrites(channel)
+                if isinstance(channel, discord.TextChannel):
+                    new_ch = await guild.create_text_channel(
+                        name=channel.name,
+                        overwrites=ch_overwrites,
+                        reason="نسخ السيرفر - روم حر كتابي"
+                    )
+                    await new_ch.edit(position=channel.position)
+                elif isinstance(channel, discord.VoiceChannel):
+                    new_ch = await guild.create_voice_channel(
+                        name=channel.name,
+                        overwrites=ch_overwrites,
+                        reason="نسخ السيرفر - روم حر صوتي"
+                    )
+                    await new_ch.edit(position=channel.position)
+                
+                await asyncio.sleep(1)
+            except Exception as e:
+                print(f"خطأ في نسخ روم حر {channel.name}: {e}")
+
+        await ctx.send("✅ **تم الانتهاء من نسخ وترتيب كل الفئات، الرومات، والرتب بنجاح تام!**")
+
+    except Exception as e:
+        await ctx.send(f"❌ حدث خطأ عام أثناء النسخ: {e}")
+
+@clone_server.error
+async def clone_server_error(ctx, error):
+    if isinstance(error, commands.MissingPermissions):
+        await ctx.send("❌ **ما عندك صلاحية Administrator (مسؤول) عشان تستخدم أمر النسخ!**")
 
 # تشغيل البوت
 import os
