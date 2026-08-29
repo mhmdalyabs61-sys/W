@@ -1318,7 +1318,22 @@ async def on_message(message):
     await bot.process_commands(message)
 
 
-
+‏@bot.event
+‏async def on_message(message):
+‏    if message.author.bot:
+‏        return
+    
+    # 1. الردود التلقائية
+‏    if message.guild:
+‏        gid = str(message.guild.id)
+‏        resps = bot_data.get("auto_responses", {}).get(gid, {})
+‏        for k, v in resps.items():
+‏            if k.lower() in message.content.lower():
+‏                await message.channel.send(v)
+‏                break
+                
+    # 2. تشغيل الأوامر (تايم، سجن، إلخ)
+‏    await bot.process_commands(message)
 # تشغيل البوت
 import os
 TOKEN = os.environ.get('MASTERGUARD_TOKEN') or 'YOUR_BOT_TOKEN_HERE'
