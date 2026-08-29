@@ -1316,6 +1316,32 @@ async def on_message(message):
     
     # السطر لازم يكون هنا بداخل الدالة تماماً
     await bot.process_commands(message)
+import discord
+from discord.ext import commands
+
+# 1. تفعيل الصلاحيات (Intents) الضرورية لقراءة الرسائل والأعضاء والأوامر
+intents = discord.Intents.default()
+intents.message_content = True  # ضروري جداً لقراءة الأوامر والنصوُص
+intents.members = True          # ضروري جداً لأوامر التايم، السجن، والمنشن
+
+bot = commands.Bot(command_prefix="!", intents=intents)
+
+# 2. حدث تشغيل البوت
+@bot.event
+async def on_ready():
+    print(f"✅ تم تسجيل الدخول باسم {bot.user}")
+    # إذا عندك مهام دورية (مثل الآيات والأحاديث) شغّلها هنا إذا متوفرة عندك:
+    # if not send_reminder.is_running():
+    #     send_reminder.start()
+
+# 3. حدث معالجة الرسائل والأوامر (هذا اللي يخلي كل الأوامر تستجيب)
+@bot.event
+async def on_message(message):
+    if message.author.bot:
+        return
+    
+    # هذا السطر الأساسي لاستقبال وتشغيل الأوامر
+    await bot.process_commands(message)
 
 
 # تشغيل البوت
