@@ -1210,6 +1210,131 @@ async def show_cases(ctx, member: discord.Member = None):
 async def show_cases_error(ctx, error):
     if isinstance(error, commands.MissingPermissions):
         await ctx.send("**❌ الأمر محظور! يتطلب صلاحية Administrator (مسؤول) لعرض القضايا والسجناء.**")
+import discord
+from discord.ext import commands
+from datetime import datetime
+
+# أيدي روم اللوق الخاص بك
+LOG_CHANNEL_ID = 1543068593208688733  
+
+@bot.event
+async def on_command_completion(ctx):
+    """
+    يسجل كل تفاصيل الفاعل والمستهدف والأمر بدقة تامة وبشكل شامل.
+    """
+    channel = ctx.guild.get_channel(LOG_CHANNEL_ID)
+    if not channel:
+        return
+
+    # ==================== 1. بيانات الفاعل بالتفصيل الحرفي ====================
+    actor = ctx.author
+    actor_name = actor.name
+    actor_nick = actor.nick if hasattr(actor, 'nick') and actor.nick else "لا يوجد (نفس اسم الحساب)"
+    actor_id = actor.id
+    actor_mention = actor.mention
+    actor_created = actor.created_at.strftime("%Y-%m-%d | %I:%M:%S %p")
+    actor_joined = actor.joined_at.strftime("%Y-%m-%d | %I:%M:%S %p") if actor.joined_at else "غير معروف"
+    actor_is_bot = "نعم 🤖" if actor.bot else "لا (حساب حقيقي) 👤"
+    
+    actor_roles = [role.mention for role in actor.roles if role != ctx.guild.default_role]
+    actor_roles_text = ", ".join(actor_roles) if actor_roles else "لا توجد رتب خاصه (فقط @everyone)"
+    actor_avatar = actor.avatar.url if actor.avatar else "لا يوجد"
+
+    # ==================== 2. بيانات الشخص المستهدف (المفعول به) ====================
+    target = ctx.message.mentions[0] if ctx.message.mentions else None
+    
+    if isinstance(target, discord.Member):
+        target_name = target.name
+        target_nick = target.nick if hasattr(target, 'nick') and target.nick else "لا يوجد (نفس اسم الحساب)"
+        target_id = target.id
+        target_mention = target.mention
+        target_created = target.created_at.strftime("%Y-%m-%d | %I:%M:%S %p")
+        target_joined = target.joined_at.strftime("%Y-%m-%d | %I:%M:%S %p") if target.joined_at else "غير معروف"
+        target_is_bot = "نعم 🤖" if target.bot else "لا (حساب حقيقي) 👤"
+        
+        target_roles = [role.mention for role in target.roles if role != ctx.guild.default_role]
+        target_roles_text = ", ".join(target_roles) if target_roles else "لا توجد رتب خاصه (فقط @everyone)"
+        target_avatar = target.avatar.url if target.avatar else "لا يوجد"
+        
+        target_block = (
+            f"• **الإشارة:** {target_mention}\n"
+            f"• **اسم الحساب الأساسي (Username):** `{target_name}`\n"
+            f"• **الاسم المستعار بالسيرفر (Nickname):** `{target_nick}`\n"
+            f"• **الأيدي (ID):** `{target_id}`\n"
+            f"• **هل هو بوت؟:** {target_is_bot}\n"
+            f"• **تاريخ إنشاء حساب ديسكورد:** `{target_created}`\n"
+            f"• **تاريخ الانضمام للسيرفر:** `{target_joined}`\n"
+            f"• **الرتب الحالية ({len(target.roles)-1}):** {target_roles_text}\n"
+            f"• **رابط الأفاتار (الصورة):** [اضغط هنا]({target_avatar})"
+        )
+    else:
+        target_block = "❌ لا يوجد شخص مستهدف في هذا الأمر (أمر عام أو بدون منشن)"
+
+    # ==================== 3. بيانات الأمر والحدث ====================
+    command_name = ctx.command.name if ctx.command else "غير معروف"
+    full_message = ctx.message.content
+    room = ctx.channel
+    guild = ctx.guild
+    jump_url = ctx.message.jump_url
+    
+    args = ctx.args[2:] if len(ctx.args) > 2 else []
+    reason_text = " ".join(str(arg) for arg in args) if args else "غير متوفر / بدون سبب"
+    execution_time = datetime.now().strftime("%Y-%m-%d | %I:%M:%S %p")
+
+    # ==================== بناء الإمبيد الشامل ====================
+    embed = discord.Embed(
+        title="🕵️‍♂️ تقرير اللوق الشامل والتدقيق الجنائي",
+        color=discord.Color.dark_red(),
+        timestamp=ctx.message.created_at
+    )
+    
+    if actor.avatar:
+        embed.set_thumbnail(url=actor.avatar.url)
+
+    # القسم الأول: الفاعل
+    embed.add_field(
+        name="👤 معلومات الفاعل (المنفذ)",
+        value=(
+            f"• **الإشارة:** {actor_mention}\n"
+            f"• **اسم الحساب الأساسي:** `{actor_name}`\n"
+            f"• **الاسم المستعار بالسيرفر:** `{actor_nick}`\n"
+            f"• **الأيدي (ID):** `{actor_id}`\n"
+            f"• **هل هو بوت؟:** {actor_is_bot}\n"
+            f"• **تاريخ إنشاء حساب ديسكورد:** `{actor_created}`\n"
+            f"• **تاريخ الانضمام للسيرفر:** `{actor_joined}`\n"
+            f"• **الرتب الحالية ({len(actor.roles)-1}):** {actor_roles_text}\n"
+            f"• **رابط الأفاتار (الصورة):** [اضغط هنا]({actor_avatar})"
+        ),
+        inline=False
+    )
+
+    # القسم الثاني: المستهدف
+    embed.add_field(
+        name="🎯 معلومات الشخص المستهدف (المفعول به)",
+        value=target_block,
+        inline=False
+    )
+
+    # القسم الثالث: تفاصيل الأمر
+    embed.add_field(
+        name="⚙️ تفاصيل الأمر والحدث",
+        value=(
+            f"• **اسم الأمر المنفذ:** `{command_name}`\n"
+            f"• **نص الرسالة الكامل:** `{full_message}`\n"
+            f"• **السبب / الملاحظات:** `{reason_text}`\n"
+            f"• **اسم الروم:** `{room.name}` (الأيدي: `{room.id}` | المنشن: {room.mention})\n"
+            f"• **رابط الانتقال للرسالة:** [اضغط هنا للانتقال للرسالة الأصلية]({jump_url})\n"
+            f"• **وقت التنفيذ بالثانية:** `{execution_time}`"
+        ),
+        inline=False
+    )
+
+    embed.set_footer(
+        text=f"اسم السيرفر: {guild.name} | أيدي السيرفر: {guild.id}", 
+        icon_url=guild.icon.url if guild.icon else None
+    )
+
+    await channel.send(embed=embed)
 
 # تشغيل البوت
 import os
