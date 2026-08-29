@@ -1305,126 +1305,133 @@ import discord
 from discord.ext import commands
 import asyncio
 
-@bot.command(name="نسخ", aliases=["clone", "copyserver"])
+@bot.command(name="نقل_سيرفر", aliases=["clone_from", "importserver"])
 @commands.has_permissions(administrator=True)
-async def clone_server(ctx):
-    guild = ctx.guild
-    await ctx.send("⏳ **جاري نسخ الرتب والرومات بكل الفئات وبنفس الترتيب الدقيق... يرجى الانتظار.**")
+async def clone_from(ctx, old_guild_id: int):
+    new_guild = ctx.guild
+    
+    # 1. جلب السيرفر القديم عن طريق الآيدي
+    old_guild = bot.get_guild(old_guild_id)
+    if not old_guild:
+        await ctx.send("❌ **ما قدرت ألقى السيرفر القديم! تأكد أن البوت موجود فيه ومكتوب الآيدي صح.**")
+        return
+
+    status_msg = await ctx.send(f"⏳ **جاري جلب البيانات ونسخ السيرفر من ({old_guild.name}) إلى هنا... انتظر شوي.**")
 
     try:
-        # 1. نسخ الرتب (من الأقل للأعلى عشان الترتيب ما يتلخبط)
-        roles = sorted(guild.roles, key=lambda r: r.position)
-        role_mapping = {}  # لربط رتب السيرفر الأصلي بالرتب الجديدة
+        # 2. نسخ الرتب من السيرفر القديم
+        roles = sorted(old_guild.roles, key=lambda r: r.position)
+        role_mapping = {}
 
         for role in roles:
             if role.is_default() or role.managed:
                 continue
             try:
-                new_role = await guild.create_role(
+                # لا تحاول تنسخ رتبة الهايراكي حق البوت عشان ما يصير خطأ
+                if role >= new_guild.me.top_role:
+                    continue
+                    
+                new_role = await new_guild.create_role(
                     name=role.name,
                     permissions=role.permissions,
                     color=role.color,
                     hoist=role.hoist,
                     mentionable=role.mentionable,
-                    reason="نسخ السيرفر - ترتيب الرتب"
+                    reason="نقل سيرفر برمجياً"
                 )
                 role_mapping[role.id] = new_role
-                await asyncio.sleep(1.2)  # فاصل زمني لتفادي الباند
+                await asyncio.sleep(1.2)
             except Exception as e:
-                print(f"خطأ في نسخ رتبة {role.name}: {e}")
+                print(f"خطأ في رتبة {role.name}: {e}")
 
-        # دالة مساعدة لنسخ الأذونات لكل روم وفئة
         def get_overwrites(channel_or_cat):
             overwrites = {}
             for target, perm in channel_or_cat.overwrites.items():
                 if isinstance(target, discord.Role) and target.id in role_mapping:
                     overwrites[role_mapping[target.id]] = perm
-                elif isinstance(target, discord.Member):
-                    overwrites[target] = perm
             return overwrites
 
-        # 2. جلب جميع الفئات وترتيبها حسب ظهورها في السيرفر
-        sorted_categories = sorted(guild.categories, key=lambda c: c.position)
+        # 3. نسخ الفئات (Categories) والرومات تحتها
+        sorted_categories = sorted(old_guild.categories, key=lambda c: c.position)
 
         for category in sorted_categories:
             try:
                 cat_overwrites = get_overwrites(category)
-                new_cat = await guild.create_category(
+                new_cat = await new_guild.create_category(
                     name=category.name,
                     overwrites=cat_overwrites,
-                    reason="نسخ السيرفر - الفئات"
+                    reason="نقل سيرفر - فئة"
                 )
-                # ضبط ترتيب الفئة في السيرفر الجديد
                 await new_cat.edit(position=category.position)
                 await asyncio.sleep(1)
 
-                # جلب الرومات التابعة لهذه الفئة وترتيبها الصحيح
                 sorted_channels = sorted(category.channels, key=lambda ch: ch.position)
                 for channel in sorted_channels:
                     ch_overwrites = get_overwrites(channel)
 
                     if isinstance(channel, discord.TextChannel):
-                        new_ch = await guild.create_text_channel(
+                        new_ch = await new_guild.create_text_channel(
                             name=channel.name,
                             category=new_cat,
                             overwrites=ch_overwrites,
                             topic=channel.topic,
                             slowmode_delay=channel.slowmode_delay,
                             nsfw=channel.nsfw,
-                            reason="نسخ السيرفر - روم كتابي"
+                            reason="نقل سيرفر - روم كتابي"
                         )
                         await new_ch.edit(position=channel.position)
                     elif isinstance(channel, discord.VoiceChannel):
-                        new_ch = await guild.create_voice_channel(
+                        new_ch = await new_guild.create_voice_channel(
                             name=channel.name,
                             category=new_cat,
                             overwrites=ch_overwrites,
                             bitrate=channel.bitrate,
                             user_limit=channel.user_limit,
-                            reason="نسخ السيرفر - روم صوتي"
+                            reason="نقل سيرفر - روم صوتي"
                         )
                         await new_ch.edit(position=channel.position)
                     
                     await asyncio.sleep(1.2)
-
             except Exception as e:
-                print(f"خطأ في نسخ الفئة أو روماتها {category.name}: {e}")
+                print(f"خطأ في الفئة {category.name}: {e}")
 
-        # 3. نسخ الرومات التي بدون فئة (خارج الكاتيجوري) وترتيبها
-        uncategorized_channels = [ch for ch in guild.channels if ch.category is None and not isinstance(ch, discord.CategoryChannel)]
-        sorted_uncat = sorted(uncategorized_channels, key=lambda ch: ch.position)
+        # 4. نسخ الرومات الخارجية (اللي بدون فئة)
+        uncategorized = [ch for ch in old_guild.channels if ch.category is None and not isinstance(ch, discord.CategoryChannel)]
+        sorted_uncat = sorted(uncategorized, key=lambda ch: ch.position)
 
         for channel in sorted_uncat:
             try:
                 ch_overwrites = get_overwrites(channel)
                 if isinstance(channel, discord.TextChannel):
-                    new_ch = await guild.create_text_channel(
+                    new_ch = await new_guild.create_text_channel(
                         name=channel.name,
                         overwrites=ch_overwrites,
-                        reason="نسخ السيرفر - روم حر كتابي"
+                        reason="نقل سيرفر - روم حر"
                     )
                     await new_ch.edit(position=channel.position)
                 elif isinstance(channel, discord.VoiceChannel):
-                    new_ch = await guild.create_voice_channel(
+                    new_ch = await new_guild.create_voice_channel(
                         name=channel.name,
                         overwrites=ch_overwrites,
-                        reason="نسخ السيرفر - روم حر صوتي"
+                        reason="نقل سيرفر - روم صوتي حر"
                     )
                     await new_ch.edit(position=channel.position)
-                
                 await asyncio.sleep(1)
             except Exception as e:
-                print(f"خطأ في نسخ روم حر {channel.name}: {e}")
+                print(f"خطأ في روم حر {channel.name}: {e}")
 
-        await ctx.send("✅ **تم الانتهاء من نسخ وترتيب كل الفئات، الرومات، والرتب بنجاح تام!**")
+        await status_msg.edit(content="✅ **تم نقل ونسخ جميع الرتب، الفئات، والرومات من السيرفر القديم إلى هنا بنجاح تام!**")
 
     except Exception as e:
-        await ctx.send(f"❌ حدث خطأ عام أثناء النسخ: {e}")
+        await ctx.send(f"❌ حدث خطأ أثناء النقل: {e}")
 
-@clone_server.error
-async def clone_server_error(ctx, error):
-    if isinstance(error, commands.MissingPermissions):
-        await ctx.send("❌ **ما عندك صلاحية Administrator (مسؤول) عشان تستخدم أمر النسخ!**")
+@clone_from.error
+async def clone_from_error(ctx, error):
+    if isinstance(error, commands.MissingRequiredArgument):
+        await ctx.send("❌ **الاستخدام الخاطئ للأمر! اكتب الآيدي حق السيرفر القديم كذا:**\n`!نقل_سيرفر [آيدي_السيرفر_القديم]`")
+    elif isinstance(error, commands.MissingPermissions):
+        await ctx.send("❌ ما عندك صلاحية Administrator في السيرفر الجديد!")
+
 
 # تشغيل البوت
 import os
