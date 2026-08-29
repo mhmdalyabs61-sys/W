@@ -5,6 +5,8 @@ from datetime import datetime, timedelta
 from typing import Union, Optional, List, Dict
 from PIL import Image, ImageDraw
 from discord.ext import tasks
+from datetime import datetime
+
 # إعدادات البوت والـ Intents الأساسية (مفعل فيها الـ members بصراحة عشان يشتغل الترحيب)
 intents = discord.Intents.default()
 intents.message_content = True
