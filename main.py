@@ -1351,7 +1351,7 @@ async def full_clone(ctx, old_guild_id: int):
                     reason="نسخ شامل - رتبة"
                 )
                 role_mapping[role.id] = new_role
-                await asyncio.sleep(1)
+                await asyncio.sleep(5.0)
             except Exception as e:
                 print(f"خطأ في رتبة {role.name}: {e}")
 
@@ -1408,7 +1408,7 @@ async def full_clone(ctx, old_guild_id: int):
                         )
                         await new_ch.edit(position=channel.position)
                     
-                    await asyncio.sleep(1)
+                    await asyncio.sleep(5.0)
             except Exception as e:
                 print(f"خطأ في الفئة {category.name}: {e}")
 
@@ -1431,7 +1431,7 @@ async def full_clone(ctx, old_guild_id: int):
                         reason="نسخ شامل - روم صوتي حر"
                     )
                     await new_ch.edit(position=channel.position)
-                await asyncio.sleep(1)
+                await asyncio.sleep(5.0)
             except Exception as e:
                 print(f"خطأ في روم حر {channel.name}: {e}")
 
