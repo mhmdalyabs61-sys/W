@@ -12,7 +12,7 @@ intents = discord.Intents.default()
 intents.message_content = True
 intents.members = True  # <--- هذا السطر الأساسي والمهم جداً
 
-bot = commands.Bot(command_prefix="", intents=intents)
+bot = commands.Bot(command_prefix="!", intents=intents)
 
 
 
@@ -40,7 +40,7 @@ intents = discord.Intents.default()
 intents.message_content = True
 intents.members = True
 
-bot = commands.Bot(command_prefix="", intents=intents)
+
 
 
 async def fetch_random_ayah(session: aiohttp.ClientSession) -> discord.Embed | None:
