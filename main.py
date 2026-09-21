@@ -1378,7 +1378,6 @@ import discord
 from discord.ext import commands, tasks
 import random
 
-# إعدادات البوت الأساسية (تأكد إنها متطابقة مع ملفك)
 intents = discord.Intents.default()
 intents.message_content = True
 bot = commands.Bot(command_prefix="!", intents=intents)
@@ -1419,6 +1418,7 @@ async def send_automatic_azkar():
                 color=discord.Color.brand_green()
             )
             embed.set_footer(text="🤖 نظام الأذكار التلقائي")
+            # التصحيح هنا: تمرير الإمبد داخل باراميتر embed=embed
             await channel.send(embed=embed)
         except Exception as e:
             print(f"خطأ في إرسال الذكر: {e}")
@@ -1427,7 +1427,6 @@ async def send_automatic_azkar():
 async def before_azkar_task():
     await bot.wait_until_ready()
 
-# حدث التشغيل مع دالة مزامنة السلاش اللي تظهر الأوامر عندك
 @bot.event
 async def on_ready():
     try:
@@ -1441,7 +1440,6 @@ async def on_ready():
         
     print(f"البوت شغال الآن: {bot.user}")
 
-# أمر السلاش لتحديد الروم
 @bot.tree.command(name="تحديد_روم_الاذكار", description="تحديد الروم المخصص لإرسال الأذكار تلقائياً كل دقيقة")
 @discord.app_commands.describe(channel="اختر روم الكتابة المخصص للأذكار")
 @discord.app_commands.checks.has_permissions(administrator=True)
@@ -1453,12 +1451,13 @@ async def set_azkar_channel(interaction: discord.Interaction, channel: discord.T
         description="✅ | **تم تفعيل نظام الأذكار التلقائي بنجاح في هذا الروم!**",
         color=discord.Color.gold()
     )
-    await channel.send(startup_embed)
+    await channel.send(embed=startup_embed)
     
     await interaction.response.send_message(
         f"**✨ تم بنجاح ربط روم الأذكار بـ {channel.mention}**", 
         ephemeral=True
     )
+
 
 
 
