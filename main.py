@@ -1378,9 +1378,7 @@ import discord
 from discord.ext import commands, tasks
 import random
 
-intents = discord.Intents.default()
-intents.message_content = True
-bot = commands.Bot(command_prefix="!", intents=intents)
+
 
 AZKAR_LIST = [
     "✨ | **لا إله إلا الله وحده لا شريك له، له الملك وله الحمد وهو على كل شيء قدير.**",
@@ -1399,7 +1397,7 @@ AZKAR_LIST = [
 
 AZKAR_CHANNELS = {}
 
-@tasks.loop(minutes=1.0)
+@tasks.loop(minutes=5.0)
 async def send_automatic_azkar():
     for guild_id, channel_id in list(AZKAR_CHANNELS.items()):
         guild = bot.get_guild(guild_id)
