@@ -1374,10 +1374,6 @@ async def clone_roles(ctx, old_guild_id: int):
 
     except Exception as e:
         await status_msg.edit(content=f"❌ صار خطأ: {e}")
-import discord
-from discord.ext import commands, tasks
-import random
-
 # ==================== قائمة الأذكار الضخمة والمجددة ====================
 AZKAR_LIST = [
     # ── التسبيح والحمد والتهليل ──
@@ -1418,7 +1414,6 @@ AZKAR_LIST = [
     "📖 | **حَسْبِيَ اللَّهُ لَا إِلَهَ إِلَّا هُوَ ۖ عَلَيْهِ تَوَكَّلْتُ ۖ وَهُوَ رَبُّ الْعَرْشِ الْعَظِيمِ (7 مرات).**"
 ]
 
-# قاموس لحفظ روم الأذكار لكل سيرفر
 AZKAR_CHANNELS = {}
 
 # ==================== مهمة الإرسال التلقائي (كل دقيقة) ====================
@@ -1433,7 +1428,6 @@ async def send_automatic_azkar():
         if not channel:
             continue
             
-        # اختيار ذكر عشوائي من القائمة الضخمة
         random_zekr = random.choice(AZKAR_LIST)
         
         try:
@@ -1449,13 +1443,6 @@ async def send_automatic_azkar():
 @send_automatic_azkar.before_loop
 async def before_azkar_task():
     await bot.wait_until_ready()
-
-# ==================== حدث التشغيل ====================
-@bot.event
-async def on_ready():
-    if not send_automatic_azkar.is_running():
-        send_automatic_azkar.start()
-    print("✨ نظام الأذكار الموسع يعمل الآن في الخلفية!")
 
 # ==================== أمر تحديد روم الأذكار بالسلاش ====================
 @bot.tree.command(name="تحديد_روم_الاذكار", description="تحديد الروم المخصص لإرسال الأذكار الموسعة كل دقيقة")
@@ -1475,6 +1462,7 @@ async def set_azkar_channel(interaction: discord.Interaction, channel: discord.T
         f"**✨ تم بنجاح ربط روم الأذكار بـ {channel.mention} في هذا السيرفر!**", 
         ephemeral=True
     )
+
 
 
 
