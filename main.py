@@ -1446,7 +1446,7 @@ async def before_azkar_task():
 
 # ==================== أمر تحديد روم الأذكار بالسلاش ====================
 @bot.tree.command(name="تحديد_روم_الاذكار", description="تحديد الروم المخصص لإرسال الأذكار الموسعة كل دقيقة")
-@app_commands.describe(channel="اختر روم الكتابة المخصص للأذكار")
+@discord.app_commands.describe(channel="اختر روم الكتابة المخصص للأذكار")
 @commands.has_permissions(administrator=True)
 async def set_azkar_channel(interaction: discord.Interaction, channel: discord.TextChannel):
     guild_id = interaction.guild.id
@@ -1456,12 +1456,13 @@ async def set_azkar_channel(interaction: discord.Interaction, channel: discord.T
         description="✅ | **تم تفعيل نظام الأذكار التلقائي بنجاح! سيتم إرسال باقة واسعة ومتنوعة من الأذكار هنا بانتظام.**",
         color=discord.Color.gold()
     )
-    await channel.send(embed=startup_embed)
+    await channel.send(startup_embed)
     
     await interaction.response.send_message(
         f"**✨ تم بنجاح ربط روم الأذكار بـ {channel.mention} في هذا السيرفر!**", 
         ephemeral=True
     )
+
 
 
 
