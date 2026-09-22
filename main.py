@@ -1529,6 +1529,7 @@ async def list_badwords(interaction: discord.Interaction):
 
 
 
+
 # تشغيل البوت
 import os
 TOKEN = os.environ.get('MASTERGUARD_TOKEN') or 'YOUR_BOT_TOKEN_HERE'
