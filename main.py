@@ -898,8 +898,8 @@ import discord
 from discord.ext import commands
 
 # ==================== إعدادات السجن ====================
-JAIL_CHANNEL_ID = 1552047119165165709
-JAIL_ROLE_ID = 1552047243794714695
+JAIL_CHANNEL_ID = 1551727453821468753
+JAIL_ROLE_ID = 1552070021738397717
 
 # قواعد البيانات المؤقتة
 saved_roles_db = {}
