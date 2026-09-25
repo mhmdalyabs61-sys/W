@@ -15,6 +15,19 @@ intents.members = True  # <--- هذا السطر الأساسي والمهم ج�
 bot = commands.Bot(command_prefix="", intents=intents)
 
 
+@bot.event
+async def on_ready():
+    print(f"✅ البوت شغال الآن وجاهز باسم: {bot.user}")
+    
+    try:
+        # هذا السطر يسوي مزامنة عامة لكل السيرفرات اللي فيها البوت
+        synced = await bot.tree.sync()
+        print(f"✅ تم بنجاح مزامنة {len(synced)} من أوامر السلاش على كل السيرفرات.")
+    except Exception as e:
+        print(f"❌ خطأ في مزامنة الأوامر: {e}")
+
+    if not send_reminder.is_running():
+        send_reminder.start()
 
 # ══════════════════════════════════════════════════════════════
 #                   ضع التوكن هنا ↓
