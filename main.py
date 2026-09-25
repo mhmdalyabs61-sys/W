@@ -1498,11 +1498,15 @@ import discord
 from discord import app_commands
 from discord.ext import commands
 
-@app_commands.guild_only()
-class RoomOrganizer(app_commands.Group, name="rooms", description="إدارة وتنسيق وإرجاع أسماء الرومات باحترافية"):
+class RoomOrganizer(commands.Cog):
+    def __init__(self, bot):
+        self.bot = bot
+
+    # --- مجموعة الأوامر تحت /rooms ---
+    room_group = app_commands.Group(name="rooms", description="إدارة وتنسيق وإرجاع أسماء الرومات باحترافية")
 
     # --- (1) أمر التعديل والتنسيق المتقدم ---
-    @app_commands.command(name="custom_edit", description="تنسيق وتعديل رومات محددة (بالبداية، النهاية، أو استبدال)")
+    @room_group.command(name="custom_edit", description="تنسيق وتعديل رومات محددة (بالبداية، النهاية، أو استبدال)")
     @app_commands.describe(
         decoration="الكلام أو الإيموجي أو الرمز اللي تبيه",
         position="مكان الإضافة (بداية الاسم أو نهايته)",
@@ -1587,7 +1591,7 @@ class RoomOrganizer(app_commands.Group, name="rooms", description="إدارة و
         )
 
     # --- (2) أمر الإرجاع والتنظيف (Reset) ---
-    @app_commands.command(name="reset", description="إرجاع أسماء الرومات طبيعية عبر حذف رمز أو نص معين بدقة")
+    @room_group.command(name="reset", description="إرجاع أسماء الرومات طبيعية عبر حذف رمز أو نص معين بدقة")
     @app_commands.describe(
         target_text="النص أو الرمز اللي تبيه ينحذف من أسامي الرومات عشان ترجع طبيعية",
         start_from="رقم روم البداية (اختياري)",
@@ -1656,8 +1660,9 @@ class RoomOrganizer(app_commands.Group, name="rooms", description="إدارة و
             ephemeral=True
         )
 
-# لا تنسى تضيف هذا السطر في بوتك الرئيسي لتفعيل الأوامر:
-# bot.tree.add_command(RoomOrganizer())
+# دالة التسجيل الأساسية لتفعيل أوامر السلاش في بوتك
+async def setup(bot):
+    await bot.add_cog(RoomOrganizer(bot))
 
 
 
