@@ -1494,6 +1494,170 @@ async def set_azkar_channel(interaction: discord.Interaction, channel: discord.T
         f"**✨ تم بنجاح ربط روم الأذكار بـ {channel.mention}**", 
         ephemeral=True
     )
+import discord
+from discord import app_commands
+from discord.ext import commands
+
+@app_commands.guild_only()
+class RoomOrganizer(app_commands.Group, name="rooms", description="إدارة وتنسيق وإرجاع أسماء الرومات باحترافية"):
+
+    # --- (1) أمر التعديل والتنسيق المتقدم ---
+    @app_commands.command(name="custom_edit", description="تنسيق وتعديل رومات محددة (بالبداية، النهاية، أو استبدال)")
+    @app_commands.describe(
+        decoration="الكلام أو الإيموجي أو الرمز اللي تبيه",
+        position="مكان الإضافة (بداية الاسم أو نهايته)",
+        target_text="لو تبي تستبدل نص قديم بنص جديد (اختياري)",
+        start_from="رقم روم البداية (اختياري، مثلاً: 5)",
+        end_at="رقم روم النهاية (اختياري، مثلاً: 20)",
+        specific_indices="أرقام رومات محددة بفواصل (مثلاً: 6, 10, 15)",
+        category="تنسيق كاتيجوري معين فقط (اختياري)"
+    )
+    @app_commands.choices(position=[
+        app_commands.Choice(name="في نهاية اسم الروم", value="end"),
+        app_commands.Choice(name="في بداية اسم الروم", value="start")
+    ])
+    @app_commands.checks.has_permissions(manage_channels=True)
+    async def custom_edit_rooms(
+        self, 
+        interaction: discord.Interaction, 
+        decoration: str, 
+        position: str = "end", 
+        target_text: str = None, 
+        start_from: int = None, 
+        end_at: int = None, 
+        specific_indices: str = None, 
+        category: discord.CategoryChannel = None
+    ):
+        await interaction.response.defer(ephemeral=True)
+        
+        guild = interaction.guild
+        
+        if category:
+            channels = category.channels
+        else:
+            channels = guild.channels
+
+        channels = [c for c in channels if not isinstance(c, discord.CategoryChannel)]
+
+        if not channels:
+            return await interaction.followup.send("❌ ما فيه أي رومات متاحة!", ephemeral=True)
+
+        target_channels = []
+
+        if specific_indices:
+            try:
+                indexes = [int(x.strip()) - 1 for x in specific_indices.split(",")]
+                target_channels = [channels[i] for i in indexes if 0 <= i < len(channels)]
+            except:
+                return await interaction.followup.send(f"❌ خطأ في كتابة الأرقام! تأكد أنها مفصولة بفواصل مثل: `6, 10, 15`", ephemeral=True)
+
+        elif start_from is not None or end_at is not None:
+            start = (start_from - 1) if start_from and start_from > 0 else 0
+            end = end_at if end_at and end_at <= len(channels) else len(channels)
+            
+            if start < len(channels):
+                target_channels = channels[start:end]
+        else:
+            target_channels = channels
+
+        if not target_channels:
+            return await interaction.followup.send("❌ ما فيه رومات تطابق النطاق اللي حطيته!", ephemeral=True)
+
+        count = 0
+        for channel in target_channels:
+            current_name = channel.name
+            
+            if target_text:
+                new_name = current_name.replace(target_text, decoration)
+            else:
+                if position == "end":
+                    new_name = f"{current_name}{decoration}"
+                else:
+                    new_name = f"{decoration}{current_name}"
+
+            try:
+                await channel.edit(name=new_name)
+                count += 1
+            except Exception as e:
+                print(f"فشل تعديل الروم {current_name}: {e}")
+
+        await interaction.followup.send(
+            f"✅ تم تعديل أسامي **{count}** روم بنجاح!", 
+            ephemeral=True
+        )
+
+    # --- (2) أمر الإرجاع والتنظيف (Reset) ---
+    @app_commands.command(name="reset", description="إرجاع أسماء الرومات طبيعية عبر حذف رمز أو نص معين بدقة")
+    @app_commands.describe(
+        target_text="النص أو الرمز اللي تبيه ينحذف من أسامي الرومات عشان ترجع طبيعية",
+        start_from="رقم روم البداية (اختياري)",
+        end_at="رقم روم النهاية (اختياري)",
+        specific_indices="أرقام رومات محددة تبي تنظفها بفواصل (مثلاً: 6, 10, 15)",
+        category="تحديد كاتيجوري معين للتنظيف داخله فقط (اختياري)"
+    )
+    @app_commands.checks.has_permissions(manage_channels=True)
+    async def reset_rooms(
+        self, 
+        interaction: discord.Interaction, 
+        target_text: str, 
+        start_from: int = None, 
+        end_at: int = None, 
+        specific_indices: str = None, 
+        category: discord.CategoryChannel = None
+    ):
+        await interaction.response.defer(ephemeral=True)
+        
+        guild = interaction.guild
+        
+        if category:
+            channels = category.channels
+        else:
+            channels = guild.channels
+
+        channels = [c for c in channels if not isinstance(c, discord.CategoryChannel)]
+
+        if not channels:
+            return await interaction.followup.send("❌ ما فيه أي رومات متاحة!", ephemeral=True)
+
+        target_channels = []
+
+        if specific_indices:
+            try:
+                indexes = [int(x.strip()) - 1 for x in specific_indices.split(",")]
+                target_channels = [channels[i] for i in indexes if 0 <= i < len(channels)]
+            except:
+                return await interaction.followup.send(f"❌ خطأ في كتابة الأرقام! تأكد أنها مفصولة بفواصل مثل: `6, 10, 15`", ephemeral=True)
+
+        elif start_from is not None or end_at is not None:
+            start = (start_from - 1) if start_from and start_from > 0 else 0
+            end = end_at if end_at and end_at <= len(channels) else len(channels)
+            
+            if start < len(channels):
+                target_channels = channels[start:end]
+        else:
+            target_channels = channels
+
+        if not target_channels:
+            return await interaction.followup.send("❌ ما فيه رومات تطابق النطاق المحدد!", ephemeral=True)
+
+        count = 0
+        for channel in target_channels:
+            current_name = channel.name
+            if target_text in current_name:
+                new_name = current_name.replace(target_text, "")
+                try:
+                    await channel.edit(name=new_name)
+                    count += 1
+                except Exception as e:
+                    print(f"فشل إرجاع الروم {current_name}: {e}")
+
+        await interaction.followup.send(
+            f"✅ تم بنجاح إزالة الرمز أو النص (`{target_text}`) وإرجاع أسماء **{count}** روم لحالتها الطبيعية!", 
+            ephemeral=True
+        )
+
+# لا تنسى تضيف هذا السطر في بوتك الرئيسي لتفعيل الأوامر:
+# bot.tree.add_command(RoomOrganizer())
 
 
 
