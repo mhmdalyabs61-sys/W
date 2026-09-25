@@ -143,11 +143,6 @@ async def before_send_reminder():
     await asyncio.sleep(5)
 
 
-@bot.event
-async def on_ready():
-    print(f"✅ تم تسجيل الدخول باسم {bot.user}")
-    if not send_reminder.is_running():
-        send_reminder.start()
 
 
 
@@ -467,9 +462,7 @@ user_scores = {}
 def fix_arabic(text):
     return text[::-1]
 
-@bot.event
-async def on_ready():
-    print(f"✅ البوت شغال الآن وجاهز باسم: {bot.user}")
+
 
 # ----------------------------------------------------
 # 1. أمر النقاط (عرض نقاطك أو لوحة المتصدرين)
