@@ -1502,10 +1502,8 @@ class RoomOrganizer(commands.Cog):
     def __init__(self, bot):
         self.bot = bot
 
-    # تعريف مجموعة الأوامر بالطريقة الصحيحة للـ Cogs
-    rooms = app_commands.Group(name="rooms", description="إدارة وتنسيق وإرجاع أسماء الرومات باحترافية")
-
-    @rooms.command(name="custom_edit", description="تنسيق وتعديل رومات محددة (بالبداية، النهاية، أو استبدال)")
+    # 1️⃣ أمر التعديل والتنسيق المباشر
+    @app_commands.command(name="room_edit", description="تنسيق وتعديل رومات محددة (بالبداية، النهاية، أو استبدال)")
     @app_commands.describe(
         decoration="الكلام أو الإيموجي أو الرمز اللي تبيه",
         position="مكان الإضافة (بداية الاسم أو نهايته)",
@@ -1520,7 +1518,7 @@ class RoomOrganizer(commands.Cog):
         app_commands.Choice(name="في بداية اسم الروم", value="start")
     ])
     @app_commands.checks.has_permissions(manage_channels=True)
-    async def custom_edit_rooms(
+    async def room_edit(
         self, 
         interaction: discord.Interaction, 
         decoration: str, 
@@ -1589,7 +1587,8 @@ class RoomOrganizer(commands.Cog):
             ephemeral=True
         )
 
-    @rooms.command(name="reset", description="إرجاع أسماء الرومات طبيعية عبر حذف رمز أو نص معين بدقة")
+    # 2️⃣ أمر الإرجاع والتنظيف المباشر
+    @app_commands.command(name="room_reset", description="إرجاع أسماء الرومات طبيعية عبر حذف رمز أو نص معين بدقة")
     @app_commands.describe(
         target_text="النص أو الرمز اللي تبيه ينحذف من أسامي الرومات عشان ترجع طبيعية",
         start_from="رقم روم البداية (اختياري)",
@@ -1598,11 +1597,11 @@ class RoomOrganizer(commands.Cog):
         category="تحديد كاتيجوري معين للتنظيف داخله فقط (اختياري)"
     )
     @app_commands.checks.has_permissions(manage_channels=True)
-    async def reset_rooms(
+    async def room_reset(
         self, 
         interaction: discord.Interaction, 
         target_text: str, 
-        start_from: int, 
+        start_from: int = None, 
         end_at: int = None, 
         specific_indices: str = None, 
         category: discord.CategoryChannel = None
@@ -1660,6 +1659,7 @@ class RoomOrganizer(commands.Cog):
 
 async def setup(bot):
     await bot.add_cog(RoomOrganizer(bot))
+
 
 
 
