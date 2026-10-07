@@ -1,6 +1,5 @@
 discord.py
 flask
 Pillow
-discord.py
 gtts
-Pyncal
+PyNaCl
