@@ -1,1 +1,0 @@
-build.apt.packages = ["libffi-dev", "libssl-dev", "build-essential", "python3-dev", "gcc", "g++", "ffmpeg"]
