@@ -1579,59 +1579,59 @@ class RoomOrganizer(commands.Cog):
 async def setup(bot):
     await bot.add_cog(RoomOrganizer(bot))
 
-import os
-import discord
-from discord.ext import commands
-from gtts import gTTS
-
-intents = discord.Intents.default()
-intents.message_content = True
-intents.guilds = True
-intents.voice_states = True
 
 
+‏import os
+‏import discord
+‏from discord.ext import commands
+‏from gtts import gTTS
 
-@bot.event
-async def on_ready():
-    print(f"تم تسجيل الدخول بنجاح باسم: {bot.user}")
+‏intents = discord.Intents.default()
+‏intents.message_content = True
+‏intents.guilds = True
+‏intents.voice_states = True
 
-@bot.command(name="join", aliases=["تعال"])
-async def join(ctx):
-    if ctx.author.voice and ctx.author.voice.channel:
-        channel = ctx.author.voice.channel
-        if ctx.voice_client:
-            await ctx.voice_client.move_to(channel)
-        else:
-            await channel.connect()
-        await ctx.send(f"تم الدخول إلى روم: {channel.name}")
-    else:
-        await ctx.send("ادخل روم صوتي أولاً!")
+‏@bot.event
+‏async def on_ready():
+‏    print(f"البوت اشتغل وصار متصل باسم: {bot.user}")
 
-@bot.event
-async def on_message(message):
-    if message.author.bot:
-        return
+‏@bot.command(name="join", aliases=["تعال"])
+‏async def join(ctx):
+‏    if ctx.author.voice and ctx.author.voice.channel:
+‏        channel = ctx.author.voice.channel
+‏        if ctx.voice_client:
+‏            await ctx.voice_client.move_to(channel)
+‏        else:
+‏            await channel.connect()
+‏        await ctx.send(f"تم الدخول إلى روم: {channel.name}")
+‏    else:
+‏        await ctx.send("ادخل روم صوتي أولاً عشان أقدر أجي معك!")
+
+‏@bot.event
+‏async def on_message(message):
+‏    if message.author.bot:
+‏        return
 
     # معالجة الأوامر أولاً
-    await bot.process_commands(message)
+‏    await bot.process_commands(message)
 
-    # إذا البوت في فويس، يقري الكلام العادي
-    if message.guild and message.voice_client and message.voice_client.is_connected():
-        if not message.content.startswith("!"):
-            try:
-                filename = f"tts_{message.guild.id}.mp3"
-                tts = gTTS(text=message.content, lang='ar', slow=False)
-                tts.save(filename)
+    # قراءة الرسائل وتحويلها لصوت إذا البوت متصل بالفويس في السيرفر
+‏    if message.guild and message.guild.voice_client and message.guild.voice_client.is_connected():
+‏        if not message.content.startswith("!"):
+‏            try:
+‏                filename = f"tts_{message.guild.id}.mp3"
+‏                tts = gTTS(text=message.content, lang='ar', slow=False)
+‏                tts.save(filename)
 
-                audio_source = discord.FFmpegPCMAudio(
-                    filename, 
-                    options="-af asetrate=22050*0.75,atempo=1.1"
+‏                audio_source = discord.FFmpegPCMAudio(
+‏                    filename, 
+‏                    options="-af asetrate=22050*0.75,atempo=1.1"
                 )
                 
-                if not message.voice_client.is_playing():
-                    message.voice_client.play(audio_source)
-            except Exception as e:
-                print(f"خطأ الصوت: {e}")
+‏                if not message.guild.voice_client.is_playing():
+‏                    message.guild.voice_client.play(audio_source)
+‏            except Exception as e:
+‏                print(f"خطأ في تشغيل الصوت: {e}")
 
 
 
