@@ -1611,29 +1611,31 @@ async def join(ctx):
 
 @bot.event
 async def on_message(message):
+    # تجاهل رسائل البوت نفسه
     if message.author.bot:
         return
 
-    # معالجة الأوامر أولاً (عشان أمر join و تعال يشتغلون صح)
+    # معالجة الأوامر أولاً (عشان أمر !join يشتغل)
     await bot.process_commands(message)
 
-    # قراءة الرسائل وتحويلها لصوت إذا البوت متصل بالفويس في السيرفر
+    # تحويل النص إلى صوت إذا كان البوت متصل بالفويس
     if message.guild and message.guild.voice_client and message.guild.voice_client.is_connected():
+        # نتأكد أن الرسالة مو أمر يبدأ بـ !
         if not message.content.startswith("!"):
             try:
                 filename = f"tts_{message.guild.id}.mp3"
                 
-                # توليد ملف الصوت وحفظه
+                # توليد الملف الصوتي
                 tts = gTTS(text=message.content, lang='ar', slow=False)
                 tts.save(filename)
 
-                # دالة لضمان حذف الملف الصوتي بعد انتهائه
+                # دالة لحذف الملف بعد الانتهاء من التشغيل لتفادي امتلاء الذاكرة
                 def after_playing(error):
                     if os.path.exists(filename):
                         try:
                             os.remove(filename)
                         except Exception as e:
-                            print(f"خطأ أثناء حذف الملف: {e}")
+                            print(f"خطأ في الحذف: {e}")
 
                 audio_source = discord.FFmpegPCMAudio(
                     filename, 
@@ -1642,8 +1644,12 @@ async def on_message(message):
                 
                 if not message.guild.voice_client.is_playing():
                     message.guild.voice_client.play(audio_source, after=after_playing)
+                    
             except Exception as e:
-                print(f"خطأ في تشغيل الصوت: {e}")
+                print(f"خطأ في TTS: {e}")
+
+
+
 
 
 
