@@ -1580,7 +1580,6 @@ async def setup(bot):
     await bot.add_cog(RoomOrganizer(bot))
 
 import os
-import asyncio
 import discord
 from discord.ext import commands
 from gtts import gTTS
@@ -1590,58 +1589,51 @@ intents.message_content = True
 intents.guilds = True
 intents.voice_states = True
 
-bot = commands.Bot(command_prefix="!", intents=intents)
-voice_clients = {}
+
 
 @bot.event
 async def on_ready():
-    print(f"البوت شغال بنجاح: {bot.user}")
+    print(f"تم تسجيل الدخول بنجاح باسم: {bot.user}")
+
+@bot.command(name="join", aliases=["تعال"])
+async def join(ctx):
+    if ctx.author.voice and ctx.author.voice.channel:
+        channel = ctx.author.voice.channel
+        if ctx.voice_client:
+            await ctx.voice_client.move_to(channel)
+        else:
+            await channel.connect()
+        await ctx.send(f"تم الدخول إلى روم: {channel.name}")
+    else:
+        await ctx.send("ادخل روم صوتي أولاً!")
 
 @bot.event
-async def on_message(message: discord.Message):
-    if message.author.bot or not message.guild:
+async def on_message(message):
+    if message.author.bot:
         return
 
-    # إذا كتبت "تعال" أو استعملت أمر !join يدخل رومت الصوتي تلقائي
-    if message.content.startswith("!join") or message.content == "تعال":
-        if message.author.voice and message.author.voice.channel:
-            channel = message.author.voice.channel
-            if message.guild.id in voice_clients and voice_clients[message.guild.id].is_connected():
-                await voice_clients[message.guild.id].move_to(channel)
-            else:
-                voice_clients[message.guild.id] = await channel.connect()
-            await message.channel.send(f"تم الدخول إلى روم: {channel.name}")
-        else:
-            await message.channel.send("ادخل روم صوتي أولاً عشان أقدر أجي معك!")
-        return
+    # معالجة الأوامر أولاً
+    await bot.process_commands(message)
 
-    # إذا البوت متصل بالفويس، أي كلام تكتبه بالتشات بيحوله لصوت ويقرأه
-    if message.guild.id in voice_clients and voice_clients[message.guild.id].is_connected():
+    # إذا البوت في فويس، يقري الكلام العادي
+    if message.guild and message.voice_client and message.voice_client.is_connected():
         if not message.content.startswith("!"):
-            vc = voice_clients[message.guild.id]
-            
-            while vc.is_playing():
-                await asyncio.sleep(0.5)
-
             try:
                 filename = f"tts_{message.guild.id}.mp3"
                 tts = gTTS(text=message.content, lang='ar', slow=False)
                 tts.save(filename)
 
-                # تشغيل الصوت بالفلتر الضخم والخشن
                 audio_source = discord.FFmpegPCMAudio(
                     filename, 
                     options="-af asetrate=22050*0.75,atempo=1.1"
                 )
                 
-                vc.play(audio_source)
-
+                if not message.voice_client.is_playing():
+                    message.voice_client.play(audio_source)
             except Exception as e:
-                print(f"خطأ في توليد أو تشغيل الصوت: {e}")
+                print(f"خطأ الصوت: {e}")
 
-    await bot.process_commands(message)
 
-bot.run(os.getenv("TOKEN"))
 
 
 
