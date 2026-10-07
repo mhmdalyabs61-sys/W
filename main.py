@@ -1614,7 +1614,7 @@ async def on_message(message):
     if message.author.bot:
         return
 
-    # معالجة الأوامر أولاً
+    # معالجة الأوامر أولاً (عشان أمر join و تعال يشتغلون صح)
     await bot.process_commands(message)
 
     # قراءة الرسائل وتحويلها لصوت إذا البوت متصل بالفويس في السيرفر
@@ -1622,8 +1622,18 @@ async def on_message(message):
         if not message.content.startswith("!"):
             try:
                 filename = f"tts_{message.guild.id}.mp3"
+                
+                # توليد ملف الصوت وحفظه
                 tts = gTTS(text=message.content, lang='ar', slow=False)
                 tts.save(filename)
+
+                # دالة لضمان حذف الملف الصوتي بعد انتهائه
+                def after_playing(error):
+                    if os.path.exists(filename):
+                        try:
+                            os.remove(filename)
+                        except Exception as e:
+                            print(f"خطأ أثناء حذف الملف: {e}")
 
                 audio_source = discord.FFmpegPCMAudio(
                     filename, 
@@ -1631,9 +1641,12 @@ async def on_message(message):
                 )
                 
                 if not message.guild.voice_client.is_playing():
-                    message.guild.voice_client.play(audio_source)
+                    message.guild.voice_client.play(audio_source, after=after_playing)
             except Exception as e:
                 print(f"خطأ في تشغيل الصوت: {e}")
+
+
+
 
 
 
