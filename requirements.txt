@@ -2,4 +2,4 @@ discord.py
 flask
 Pillow
 gtts
-PyNaCl
+https://github.com/PyNaCl/PyNaCl/releases/download/1.5.0/PyNaCl-1.5.0-cp311-cp311-manylinux_2_17_x86_64.manylinux2014_x86_64.whl
