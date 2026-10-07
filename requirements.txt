@@ -1,3 +1,5 @@
 discord.py
 flask
 Pillow
+discord.py
+gtts
