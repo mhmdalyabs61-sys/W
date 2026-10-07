@@ -1,1 +1,1 @@
-build.apt.packages = ["libffi-dev", "gcc", "g++"]
+build.apt.packages = ["libffi-dev", "gcc", "g++", "ffmpeg"]
