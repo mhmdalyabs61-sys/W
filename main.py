@@ -10,7 +10,8 @@ TOKEN = os.getenv("DISCORD_TOKEN", "YOUR_TOKEN_HERE")
 # إعدادات العميل (Self-bot)
 class MyClient(discord.Client):
     def __init__(self):
-        super().__init__(intents=discord.Intents.default())
+super().__init__()
+
         self.tree = app_commands.CommandTree(self)
 
     async def setup_hook(self):
