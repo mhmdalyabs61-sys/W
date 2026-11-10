@@ -6,27 +6,40 @@ import string
 import os
 
 # ==========================================
-# أداة فحص وتوليد اليوزرات العشوائية (Railway Ready)
+# أداة فحص وتوليد اليوزرات العشوائية + Webhook
 # ==========================================
 
-# في Railway: سيقوم السكربت بسحب التوكنات مباشرة من إعدادات المتغيرات (Variables) هناك.
-# محلياً: يمكنك وضعها في المتغير النصي الاحتياطي أسفل لو احتجت.
-TOKEN = os.getenv("TOKEN", "ضع_التوكن_هنا_لو_بتشغله_محلياً")
+# 1. التوكنات: تُسحب تلقائياً من متغير البيئة TOKEN في Railway (مفصولة بفواصل)
+TOKEN = os.getenv("TOKEN", "")
+
+# 2. معلومات روم الويب هوك (مثبتة مباشرة في الكود كما طلبْت)
+CHANNEL_URL = "https://discord.com/channels/1569068084982059129/1569818461792772228"
+WEBHOOK_URL = "https://discord.com/api/webhooks/1569827836041101323/LoLYfvNjEnarlvjEavVYL2-e7YQ30SlNTvfuFY502JQf4mUnwDiKYxip4SKvJ1GS501J"
 
 # إعدادات الفحص
-TOTAL_TO_CHECK = 10000   # عدد اليوزرات العشوائية المراد فحصها
+TOTAL_TO_CHECK = 10000   # عدد اليوزرات المراد فحصها
 USERNAME_LENGTH = 4      # طول اليوزر (4 للرباعي)
 OUTPUT_FILE = "available_pro.txt"
 
-# الرموز المسموحة رسمياً في ديسكورد
 CHARS = string.ascii_lowercase + string.digits + "_"
 
 def generate_random_username(length):
-    """توليد يوزر عشوائي واستبعاد الشروط المرفوضة من ديسكورد تلقائياً"""
+    """توليد يوزر عشوائي واستبعاد الشروط المرفوضة من ديسكورد"""
     while True:
         uname = "".join(random.choices(CHARS, k=length))
         if not uname.startswith("_") and not uname.endswith("_") and "__" not in uname:
             return uname
+
+async def send_webhook(session, username):
+    """إرسال تنبيه فوري إلى روم ديسكورد عبر الويب هوك عند صيد يوزر متاح"""
+    payload = {
+        "content": f"🎉 **تم صيد يوزر ديسكورد متاح بنجاح!**\n> اليوزر: `{username}`\n📍 الروم: {CHANNEL_URL}\n⚡ مبروك الصيد يا وحش!"
+    }
+    try:
+        async with session.post(WEBHOOK_URL, json=payload) as resp:
+            pass
+    except Exception:
+        pass
 
 async def check_username(session, token, username, stats):
     """فحص اليوزر باستخدام هيدرز المتصفح المتقدمة"""
@@ -47,9 +60,14 @@ async def check_username(session, token, username, stats):
             stats["checked"] += 1
             if resp.status == 200:
                 stats["available"] += 1
+                # حفظ في الملف
                 with open(OUTPUT_FILE, "a", encoding="utf-8") as f:
                     f.write(f"{username}\n")
                 print(f"\n[🎯 صيد متاح!] -> {username}")
+                
+                # إرسال التنبيه للويب هوك
+                await send_webhook(session, username)
+                
             elif resp.status == 429:
                 stats["ratelimited"] += 1
                 await asyncio.sleep(2.0)
@@ -68,11 +86,10 @@ async def worker(worker_id, tokens, queue, stats):
             queue.task_done()
 
 async def main():
-    if not TOKEN or TOKEN == "ضع_التوكن_هنا_لو_بتشغله_محلياً":
+    if not TOKEN:
         print("❌ خطأ: لم يتم العثور على التوكن! تأكد من إضافة متغير `TOKEN` في إعدادات Railway.")
         return
 
-    # دعم وضع توكن واحد أو عدة توكنات مفصولة بفاصلة في نفس المتغير
     tokens_list = [t.strip() for t in TOKEN.split(",") if t.strip()]
 
     print(f"🎲 جاري توليد وتجهيز ({TOTAL_TO_CHECK}) يوزر عشوائي بطول ({USERNAME_LENGTH} خانات)...")
@@ -87,7 +104,7 @@ async def main():
             await usernames_queue.put(uname)
 
     print(f"📦 تم تحميل الطابور بنجاح. عدد التوكنات الفعالة: {len(tokens_list)}")
-    print("🔥 بدء محرك الفحص فائق السرعة...\n")
+    print("🔥 بدء محرك الفحص فائق السرعة مع تفعيل الويب هوك...\n")
 
     stats = {
         "checked": 0,
@@ -117,4 +134,7 @@ async def main():
     print(f"📁 النتائج محفوظة في ملف: {OUTPUT_FILE}")
 
 if __name__ == "__main__":
-    asyncio.run(main())
+    try:
+        asyncio.run(main())
+    except KeyboardInterrupt:
+        print("\n❌ تم إيقاف الأداة.")
