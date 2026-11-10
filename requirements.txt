@@ -1,4 +1,1 @@
-discord.py
-discord.py-self
-PyNaCl
-yt-dlp
+aiohttp>=3.8.0
