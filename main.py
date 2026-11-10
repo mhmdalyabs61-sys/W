@@ -1,4 +1,10 @@
 import os
+import imageio_ffmpeg
+
+# تعيين مسار الـ ffmpeg تلقائياً من المكتبة اللي حملناها
+os.environ["PATH"] += os.pathsep + os.path.dirname(imageio_ffmpeg.get_ffmpeg_exe())
+
+import os
 import discord
 from discord.ext import commands
 import yt_dlp
