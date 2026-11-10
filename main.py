@@ -1,7 +1,7 @@
 import os
 import imageio_ffmpeg
 
-# تعيين مسار الـ ffmpeg تلقائياً من المكتبة مباشرة
+# تعيين مسار الـ ffmpeg تلقائياً
 os.environ["PATH"] += os.pathsep + os.path.dirname(imageio_ffmpeg.get_ffmpeg_exe())
 
 import discord
@@ -9,30 +9,32 @@ from discord import app_commands
 from discord.ext import commands
 import yt_dlp
 
-# إعداد السلف-بوت باستخدام حسابك الشخصي مع إضافة الـ intents الإلزامية
-class MySelfBot(commands.Bot):
+class UniversalSelfBot(commands.Bot):
     def __init__(self):
         intents = discord.Intents.default()
         intents.message_content = True
+        intents.guilds = True
+        intents.voice_states = True
+        # هنا السر: self_bot=True عشان يشتغل كحساب شخصي حر طليق بأي سيرفر
         super().__init__(command_prefix="!", intents=intents, self_bot=True)
 
     async def setup_hook(self):
+        # مزامنة أوامر السلاش (للسلف بوت تظهر عندك بالسيرفرات اللي أنت فيها)
         await self.tree.sync()
         print(f"تم تسجيل الدخول بنجاح بالحساب الشخصي: {self.user} (ID: {self.user.id})")
         print("---------------------------------------------")
 
-client = MySelfBot()
+client = UniversalSelfBot()
 
 @client.event
 async def on_ready():
-    print(f"السلف-بوت الشخصي جاهز ويعمل الآن!")
+    print(f"السلف-بوت العالمي جاهز ويستجيب في كل السيرفرات!")
 
-# أمر السلاش: /play
-@client.tree.command(name="play", description="تشغيل مقطع صوتي عبر الحساب الشخصي في روم صوتي")
+@client.tree.command(name="play", description="تشغيل مقطع صوتي في أي روم صوتي عبر الحساب الشخصي")
 @app_commands.describe(
-    url="رابط المقطع (مثل تيك توك)",
-    channel_id="آيدي الروم الصوتي المراد الدخول إليه",
-    volume_mode="مستوى الصوت المطلوب"
+    url="رابط المقطع (تيك توك أو غيره)",
+    channel_id="آيدي الروم الصوتي",
+    volume_mode="مستوى الصوت"
 )
 @app_commands.choices(volume_mode=[
     app_commands.Choice(name="خفيف (50%)", value="خفيف"),
@@ -85,7 +87,7 @@ async def play(interaction: discord.Interaction, url: str, channel_id: str, volu
             title = info.get('title', 'فيديو')
 
         if not url2:
-            await interaction.followup.send("❌ فشل في استخراج رابط الصوت المباشر من هذا الرابط.")
+            await interaction.followup.send("❌ فشل في استخراج رابط الصوت المباشر.")
             return
 
         if voice_client.is_playing():
@@ -99,17 +101,16 @@ async def play(interaction: discord.Interaction, url: str, channel_id: str, volu
 
         voice_client.play(source, after=lambda e: print(f'انتهى التشغيل: {e}'))
 
-        await interaction.followup.send(f"▶️ دخل الحساب الروم وشغل المقطع: **{title}** (الوضع: {volume_mode})")
+        await interaction.followup.send(f"▶️ دخل الحساب الروم وشغل: **{title}** (الوضع: {volume_mode})")
 
     except Exception as e:
         await interaction.followup.send(f"❌ حدث خطأ أثناء التشغيل: {e}")
 
-# أمر إخراج الحساب من الروم: /leave
-@client.tree.command(name="leave", description="إخراج الحساب الشخصي من الروم الصوتي")
+@client.tree.command(name="leave", description="إخراج الحساب من الروم الصوتي")
 async def leave(interaction: discord.Interaction):
     if interaction.guild.voice_client:
         await interaction.guild.voice_client.disconnect()
-        await interaction.response.send_message("👋 طلعت من الروم الصوتي.")
+        await interaction.response.send_message("👋 طلعت من الروم.")
     else:
         await interaction.response.send_message("❌ أنا مو متصل بأي روم أصلاً!", ephemeral=True)
 
