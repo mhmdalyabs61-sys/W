@@ -1,5 +1,4 @@
-git+https://github.com/dolfies/discord.py-self.git
+discord.py-self
 yt-dlp
 PyNaCl
-davey
-imageio-ffmpeg
+imageio_ffmpeg
