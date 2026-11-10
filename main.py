@@ -1,13 +1,11 @@
 import os
-import imageio_ffmpeg
-
-# تعيين مسار الـ ffmpeg تلقائياً من المكتبة اللي حملناها
-os.environ["PATH"] += os.pathsep + os.path.dirname(imageio_ffmpeg.get_ffmpeg_exe())
-
-import os
 import discord
 from discord.ext import commands
 import yt_dlp
+
+# تعيين مسار الـ ffmpeg مباشرة ليتوافق مع نظام لينكس في رايلواي
+if os.name == 'posix':
+    os.environ["PATH"] += os.pathsep + "/nix/store"
 
 # إعداد السلف-بوت باستخدام حسابك الشخصي
 class MySelfBot(commands.Bot):
@@ -53,22 +51,33 @@ async def play(ctx, url: str, channel_id: int, volume_mode: str = "عادي"):
             voice_client = ctx.guild.voice_client
             await voice_client.move_to(voice_channel)
 
-        YDL_OPTIONS = {'format': 'bestaudio', 'noplaylist': 'True'}
+        YDL_OPTIONS = {
+            'format': 'bestaudio/best',
+            'noplaylist': True,
+        }
+        
         FFMPEG_OPTIONS = {
             'before_options': '-reconnect 1 -reconnect_streamed 1 -reconnect_delay_max 5',
             'options': '-vn'
         }
 
+        # استخراج الرابط المباشر الحقيقي (يدعم تيك توك وغيرها بدون مشاكل صمت)
         with yt_dlp.YoutubeDL(YDL_OPTIONS) as ydl:
             info = ydl.extract_info(url, download=False)
-            url2 = info['url']
+            url2 = info.get('url', None)
             title = info.get('title', 'فيديو')
+
+        if not url2:
+            await ctx.send("❌ فشل في استخراج رابط الصوت المباشر من هذا الرابط.")
+            return
 
         if voice_client.is_playing():
             voice_client.stop()
 
-        # تشغيل الصوت للجميع عبر حسابك مع التحكم بالقوة المطلوبة
-        source = discord.PCMVolumeTransformer(discord.FFmpegPCMAudio(url2, **FFMPEG_OPTIONS))
+        # تشغيل الصوت للجميع عبر حسابك مع التحكم بالقوة المطلوبة ومعرف الـ executable صراحة
+        source = discord.PCMVolumeTransformer(
+            discord.FFmpegPCMAudio(url2, executable="ffmpeg", **FFMPEG_OPTIONS)
+        )
         source.volume = vol_multiplier  
 
         voice_client.play(source, after=lambda e: print(f'انتهى التشغيل: {e}'))
