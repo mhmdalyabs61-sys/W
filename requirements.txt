@@ -1,4 +1,4 @@
-discord.py-self
+discord.py
 yt-dlp
-PyNaCl
 imageio_ffmpeg
+PyNaCl
