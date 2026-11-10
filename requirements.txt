@@ -1,5 +1,4 @@
-git+https://github.com/dolfies/discord.py-self.git
+git+https://github.com/dolfies/discord.py-self.git#egg=discord.py-self[voice]
 yt-dlp
 PyNaCl
-pynacl-async
-cffi
+davey
