@@ -1,7 +1,7 @@
-import asyncio
-import os
 import discord
-from discord import app_commands
+from discord.ext import commands
+import os
+import asyncio
 import yt_dlp
 
 # قراءة التوكن من متغيرات البيئة (أمنياً لكي لا ينكشف في جيثب) أو تعيينه عبر متغير فارغ
