@@ -9,14 +9,14 @@ from discord import app_commands
 from discord.ext import commands
 import yt_dlp
 
-# إعداد السلف-بوت باستخدام حسابك الشخصي
+# إعداد السلف-بوت باستخدام حسابك الشخصي مع إضافة الـ intents الإلزامية
 class MySelfBot(commands.Bot):
     def __init__(self):
-        # استخدام self_bot=True عشان يفهم إنه حساب شخصي مو بوت رسمي
-        super().__init__(command_prefix="!", self_bot=True)
+        intents = discord.Intents.default()
+        intents.message_content = True
+        super().__init__(command_prefix="!", intents=intents, self_bot=True)
 
     async def setup_hook(self):
-        # مزامنة أوامر السلاش للسلف-بوت
         await self.tree.sync()
         print(f"تم تسجيل الدخول بنجاح بالحساب الشخصي: {self.user} (ID: {self.user.id})")
         print("---------------------------------------------")
@@ -41,7 +41,6 @@ async def on_ready():
     app_commands.Choice(name="قوي جداً (200%)", value="قوي_جدا"),
 ])
 async def play(interaction: discord.Interaction, url: str, channel_id: str, volume_mode: str = "عادي"):
-    # الرد الفوري عشان ديسكورد ما يعطيني خطأ انقضاء المهلة
     await interaction.response.defer(thinking=True)
 
     volumes = {
@@ -58,14 +57,12 @@ async def play(interaction: discord.Interaction, url: str, channel_id: str, volu
         await interaction.followup.send("❌ آيدي الروم الصوتي يجب أن يكون أرقاماً فقط!")
         return
 
-    # جلب الروم الصوتي
     voice_channel = client.get_channel(ch_id)
     if not voice_channel or not isinstance(voice_channel, discord.VoiceChannel):
         await interaction.followup.send("❌ لم أتمكن من العثور على الروم الصوتي بهذا الآيدي، تأكد منه!")
         return
 
     try:
-        # الاتصال بالروم الصوتي
         if interaction.guild.voice_client is None:
             voice_client = await voice_channel.connect()
         else:
@@ -82,7 +79,6 @@ async def play(interaction: discord.Interaction, url: str, channel_id: str, volu
             'options': '-vn'
         }
 
-        # استخراج رابط الصوت المباشر
         with yt_dlp.YoutubeDL(YDL_OPTIONS) as ydl:
             info = ydl.extract_info(url, download=False)
             url2 = info.get('url', None)
@@ -95,7 +91,6 @@ async def play(interaction: discord.Interaction, url: str, channel_id: str, volu
         if voice_client.is_playing():
             voice_client.stop()
 
-        # تشغيل الصوت
         ffmpeg_path = imageio_ffmpeg.get_ffmpeg_exe()
         source = discord.PCMVolumeTransformer(
             discord.FFmpegPCMAudio(url2, executable=ffmpeg_path, **FFMPEG_OPTIONS)
@@ -118,7 +113,6 @@ async def leave(interaction: discord.Interaction):
     else:
         await interaction.response.send_message("❌ أنا مو متصل بأي روم أصلاً!", ephemeral=True)
 
-# تشغيل السلف-بوت باستخدام توكن حسابك الشخصي (أو الحساب الوهمي) في رايلواي
 token = os.getenv("DISCORD_TOKEN")
 if token:
     client.run(token)
