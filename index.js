@@ -33,7 +33,7 @@ bot.on('messageCreate', async message => {
         const url = args[3];
 
         if (!volumeLevel || !channelId || !personalToken || !url) {
-            return message.reply("⚠️ الاستخدام الصحيح: `!play [خفيف/عادي/قوي/قوي جدا] [أيدي_الفويس] [توكنك_الشخصي] [رابط_التيك_توك]`");
+            return message.reply("⚠️ الاستخدام الصحيح: `!play [خفيف/عادي/قوي/قوي جدا] [أيدي_الفويس] [توكنك_الشخصي] [الرابط]`");
         }
 
         message.reply("🔄 جاري معالجة الرابط ودخول حسابك الشخصي...");
@@ -60,15 +60,8 @@ bot.on('messageCreate', async message => {
                 const volumes = { "خفيف": 0.2, "عادي": 0.5, "قوي": 1.0, "قوي جدا": 2.0 };
                 const vol = volumes[volumeLevel] || 0.5;
 
-                // التحقق من الرابط واستخراج التدفق الصوتي بـ play-dl يدعم يوتيوب وتيك توك
-                let streamData;
-                if (url.includes('tiktok.com')) {
-                    // طريقة خاصة لمعالجة روابط تيك توك عبر play-dl
-                    const info = await play.tiktok(url);
-                    streamData = await play.stream(info.video_url);
-                } else {
-                    streamData = await play.stream(url);
-                }
+                // معالجة الرابط مباشرة عبر play-dl (يدعم تيك توك ويوتيوب بكفاءة)
+                const streamData = await play.stream(url);
 
                 const resource = createAudioResource(streamData.stream, {
                     inputType: streamData.type,
