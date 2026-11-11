@@ -30,13 +30,13 @@ bot.on('messageCreate', async message => {
         const volumeLevel = args[0];
         const channelId = args[1];
         const personalToken = args[2];
-        const url = args[3];
+        const url = args.join(' '); // لضمان التقاط الرابط كاملاً وبدون أخطاء تقطيع
 
         if (!volumeLevel || !channelId || !personalToken || !url) {
             return message.reply("⚠️ الاستخدام الصحيح: `!play [خفيف/عادي/قوي/قوي جدا] [أيدي_الفويس] [توكنك_الشخصي] [الرابط]`");
         }
 
-        message.reply("🔄 جاري معالجة الرابط وتجاوز الحماية لدخول حسابك الشخصي...");
+        message.reply("🔄 جاري معالجة الرابط ودخول حسابك الشخصي...");
 
         const selfClient = new SelfClient({ checkUpdate: false });
 
@@ -60,25 +60,26 @@ bot.on('messageCreate', async message => {
                 const volumes = { "خفيف": 0.2, "عادي": 0.5, "قوي": 1.0, "قوي جدا": 2.0 };
                 const vol = volumes[volumeLevel] || 0.5;
 
-                // إعدادات متقدمة لتجاوز حماية الروابط ومنع أخطاء الـ Headers والتحقق البشري
                 let streamData;
-                if (url.includes('tiktok.com')) {
-                    // سحب بيانات تيك توك عبر البحث المباشر مع تجاوز القيود
-                    let searchInfo = await play.search(url, { limit: 1 });
-                    if (!searchInfo || searchInfo.length === 0) {
-                        throwعوارض: new Error("تعذر جلب مقطع تيك توك، تأكد أن الرابط عام وصحيح.");
+                
+                // معالجة ذكية وآمنة للرابط بناءً على مصدره
+                if (url.includes('tiktok.com') || url.includes('vm.tiktok.com') || url.includes('vt.tiktok.com')) {
+                    const searchResults = await play.search(url, { limit: 1 });
+                    if (!searchResults || searchResults.length === 0 || !searchResults[0].url) {
+                        throw new Error("تعذر جلب مقطع تيك توك، تأكد من صحة الرابط.");
                     }
-                    streamData = await play.stream(searchInfo[0].url);
+                    streamData = await play.stream(searchResults[0].url);
                 } else {
-                    // سحب بيانات يوتيوب مع إعدادات التوافقية ومنع حظر الروبوتات
-                    streamData = await play.stream(url, { 
-                        discordPlayerCompatibility: true,
-                        quality: 2 
-                    });
+                    // التحقق من صحة رابط يوتيوب أو استخدامه عبر البث المباشر
+                    const validate = await play.validate(url);
+                    if (!validate) {
+                        throw new Error("رابط يوتيوب غير صالح أو غير مدعوم.");
+                    }
+                    streamData = await play.stream(url, { discordPlayerCompatibility: true });
                 }
 
                 if (!streamData || !streamData.stream) {
-                    throw new Error("لم يتم العثور على تدفق صوتي صالح للرابط.");
+                    throw new Error("فشل في استخراج التدفق الصوتي من الرابط.");
                 }
 
                 const resource = createAudioResource(streamData.stream, {
