@@ -37,7 +37,7 @@ bot.on('messageCreate', async message => {
             return message.reply("⚠️ الاستخدام الصحيح: `!play [خفيف/عادي/قوي/قوي جدا] [أيدي_الفويس] [توكنك_الشخصي] [الرابط]`");
         }
 
-        message.reply("🔄 جاري سحب المقطع وتجاوز الحماية...");
+        message.reply("🔄 جاري تحميل مقطع التيك توك وتجهيزه...");
 
         const selfClient = new SelfClient({ checkUpdate: false });
 
@@ -61,48 +61,31 @@ bot.on('messageCreate', async message => {
                 const volumes = { "خفيف": 0.2, "عادي": 0.5, "قوي": 1.0, "قوي جدا": 2.0 };
                 const vol = volumes[volumeLevel] || 0.5;
 
-                let audioStreamUrl = url;
+                let directVideoUrl = url;
 
+                // لو الرابط تيك توك، نسحب الـ Direct URL من بديل سريع وخفيف
                 if (url.includes('tiktok.com')) {
-                    let success = false;
+                    const response = await axios.get(`https://tikwm.com/api/?url=${encodeURIComponent(url)}`, {
+                        headers: { 'User-Agent': 'Mozilla/5.0' },
+                        timeout: 8000
+                    });
                     
-                    // المصدر الأول: TikWM الأساسي
-                    try {
-                        const res1 = await axios.get(`https://tikwm.com/api/?url=${encodeURIComponent(url)}`, { timeout: 4000 });
-                        if (res1.data && res1.data.data && res1.data.data.play) {
-                            audioStreamUrl = res1.data.data.play;
-                            success = true;
-                        }
-                    } catch (e) {}
-
-                    // المصدر الثاني: TikWM النسخة البديلة
-                    if (!success) {
-                        try {
-                            const res2 = await axios.get(`https://www.tikwm.com/api/?url=${encodeURIComponent(url)}&hd=1`, { timeout: 4000 });
-                            if (res2.data && res2.data.data && res2.data.data.play) {
-                                audioStreamUrl = res2.data.data.play;
-                                success = true;
-                            }
-                        } catch (e) {}
-                    }
-
-                    // المصدر الثالث: API بديلة لتعطيل الحظر
-                    if (!success) {
-                        try {
-                            const res3 = await axios.get(`https://api.tikmate.app/api/lookup?url=${encodeURIComponent(url)}`, { timeout: 4000 });
-                            if (res3.data && res3.data.token && res3.data.id) {
-                                audioStreamUrl = `https://tikmate.app/download/${res3.data.token}/${res3.data.id}.mp4`;
-                                success = true;
-                            }
-                        } catch (e) {}
-                    }
-
-                    if (!success) {
-                        throw new Error("تعذر جلب رابط تيك توك من جميع السيرفرات، جرب رابط مقطع آخر.");
+                    if (response.data && response.data.data && response.data.data.play) {
+                        directVideoUrl = response.data.data.play;
+                    } else {
+                        throw new Error("فشل استخراج الرابط المباشر للمقطع.");
                     }
                 }
 
-                const resource = createAudioResource(audioStreamUrl, {
+                // سحب المقطع كبيانات ثنائية (Stream) لضمان تشغيله بدون مشاكل حظر
+                const videoStream = await axios({
+                    method: 'get',
+                    url: directVideoUrl,
+                    responseType: 'stream',
+                    headers: { 'User-Agent': 'Mozilla/5.0' }
+                });
+
+                const resource = createAudioResource(videoStream.data, {
                     inlineVolume: true,
                     executable: ffmpeg
                 });
@@ -113,7 +96,7 @@ bot.on('messageCreate', async message => {
                 connection.subscribe(player);
                 player.play(resource);
 
-                message.reply(`✅ تم تشغيل المقطع بنجاح بقوة (**${volumeLevel}**)ـ!`);
+                message.reply(`✅ تم تشغيل تيك توك بنجاح بقوة (**${volumeLevel}**)ـ!`);
 
                 player.on(AudioPlayerStatus.Idle, () => {
                     connection.destroy();
@@ -129,7 +112,7 @@ bot.on('messageCreate', async message => {
 
             } catch (error) {
                 console.error(error);
-                message.reply(`❌ فشل تشغيل الرابط: ${error.message}`);
+                message.reply(`❌ فشل تشغيل المقطع: ${error.message}`);
                 selfClient.destroy();
             }
         });
