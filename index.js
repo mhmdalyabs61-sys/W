@@ -95,9 +95,11 @@ bot.on('messageCreate', async message => {
                     }
                 }
 
+                // تمرير الرابط المباشر للـ FFmpeg لفك واستخراج الصوت بدقة
                 const resource = createAudioResource(audioStreamUrl, {
                     inlineVolume: true,
-                    executable: ffmpeg
+                    executable: ffmped = ffmpeg,
+                    metadata: { title: "TikTok Audio" }
                 });
 
                 resource.volume.setVolume(vol);
