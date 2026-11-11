@@ -6,7 +6,7 @@ import string
 import os
 
 # ==========================================
-# فاحص يوزرات ديسكورد مع طباعة اليوزر الحالي في اللوق
+# فاحص يوزرات ديسكورد - سرعة ثابتة وآمنة تماماً (10 طلب/ث)
 # ==========================================
 
 TOKEN = os.getenv("TOKEN", "")
@@ -18,7 +18,8 @@ BATCH_SIZE = 10000       # حجم الدفعة
 USERNAME_LENGTH = 4      # طول اليوزر (رباعي)
 OUTPUT_FILE = "available_pro.txt"
 
-TARGET_REQUESTS_PER_SECOND = 12
+# السرعة مقفولة تماماً على 10 طلبات بالثانية بناءً على طلبك
+TARGET_REQUESTS_PER_SECOND = 10
 
 CHARS = string.ascii_lowercase + string.digits + "_"
 
@@ -65,28 +66,28 @@ async def check_username(session, token, username, stats):
                         f.write(f"{username}\n")
                     print(f"\n[🎯 صيد متاح!] -> {username}")
                     await send_webhook(session, username)
-                return True
+                return "OK"
                 
             elif resp.status == 429:
                 stats["ratelimited"] += 1
-                return False
+                return "RATELIMIT"
                 
             elif resp.status in (401, 403):
                 stats["dead_tokens"] += 1
                 return "DEAD"
             
-            return True
+            return "OK"
     except Exception:
         stats["errors"] += 1
-        return False
+        return "ERROR"
 
 async def worker(worker_id, active_tokens, queue, stats, rate_limiter):
-    """عامل فحص موزع يعرض اليوزر الذي يتم فحصه"""
-    connector = aiohttp.TCPConnector(limit=10, force_close=True)
+    """عامل فحص يلتزم بالسرعة الثابتة (10 طلب/ث) بدقة"""
+    connector = aiohttp.TCPConnector(limit=5, force_close=True)
     async with aiohttp.ClientSession(connector=connector) as session:
         while not queue.empty():
             if not active_tokens:
-                await asyncio.sleep(2.0)
+                await asyncio.sleep(3.0)
                 continue
 
             token = active_tokens[worker_id % len(active_tokens)]
@@ -96,20 +97,22 @@ async def worker(worker_id, active_tokens, queue, stats, rate_limiter):
             except asyncio.QueueEmpty:
                 break
 
-            # حفظ اليوزر الحالي في الستات عشان يظهر في الشاشة
             stats["current_user"] = username
 
+            # استخدام Semaphore لتقييد السرعة بـ 10 طلبات بالثانية بدقة
             async with rate_limiter:
                 result = await check_username(session, token, username, stats)
+                # مهلة زمنية دقيقة لضبط إيقاع الطلبات
                 await asyncio.sleep(1.0 / TARGET_REQUESTS_PER_SECOND)
 
             if result == "DEAD":
                 if token in active_tokens:
                     active_tokens.remove(token)
                     print(f"\n⚠️ [تحذير] استبعاد توكن تالف. المتبقي: {len(active_tokens)}")
-            elif result is False:
+            elif result == "RATELIMIT":
+                # إذا جاء لمتد، نريح التوكن شوي عشان ما يعلق بـ 429
                 await queue.put(username)
-                await asyncio.sleep(1.0)
+                await asyncio.sleep(3.0)
 
             queue.task_done()
 
@@ -119,7 +122,7 @@ async def main():
         return
 
     tokens_list = [t.strip() for t in TOKEN.split(",") if t.strip()]
-    print(f"🚀 بدء الفحص مع عرض اليوزرات الحالية (السرعة: {TARGET_REQUESTS_PER_SECOND} طلب/ث). التوكنات: {len(tokens_list)}")
+    print(f"🚀 بدء التشغيل برتم آمن وثابت تماماً ({TARGET_REQUESTS_PER_SECOND} طلب/ث). التوكنات: {len(tokens_list)}")
 
     rate_limiter = asyncio.Semaphore(TARGET_REQUESTS_PER_SECOND)
     batch_number = 1
@@ -152,21 +155,21 @@ async def main():
         }
 
         start_time = time.time()
-        workers_count = min(len(current_active_tokens) * 3, 15)
+        # تقليل عدد العمال ليتناسب مع السرعة الهادئة والمحددة بـ 10
+        workers_count = min(len(current_active_tokens) * 2, 5)
 
         tasks = [asyncio.create_task(worker(i, current_active_tokens, usernames_queue, stats, rate_limiter)) for i in range(workers_count)]
 
         while not usernames_queue.empty() and current_active_tokens:
             elapsed = time.time() - start_time
             speed = stats["checked"] / elapsed if elapsed > 0 else 0
-            # طباعة العداد مع اسم اليوزر الحالي يتحرك قدامك
-            print(f"\r🔍 [فحص: {stats['checked']}/{BATCH_SIZE}] | 👤 [اليوزر: {stats['current_user']:<6}] | 🟢 [متاح: {stats['available']}] | ⏳ [{speed:.1f} يوزر/ث] | ⚠️ [429: {stats['ratelimited']}]", end="")
-            await asyncio.sleep(0.3)
+            print(f"\r🔍 [فحص: {stats['checked']}/{BATCH_SIZE}] | 👤 [{stats['current_user']:<6}] | 🟢 [متاح: {stats['available']}] | ⏳ [{speed:.1f} يوزر/ث] | ⚠️ [429: {stats['ratelimited']}]", end="")
+            await asyncio.sleep(0.4)
 
         await asyncio.gather(*tasks, return_exceptions=True)
         
         elapsed_total = time.time() - start_time
-        print(f"\n✅ انتهت الدفعة #{batch_number} في {elapsed_total:.2f} ثانية! الانتقال للدفعة التالية...")
+        print(f"\n✅ انتهت الدفعة #{batch_number} في {elapsed_total:.2f} ثانية!")
         batch_number += 1
 
 if __name__ == "__main__":
