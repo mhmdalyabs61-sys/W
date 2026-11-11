@@ -6,7 +6,7 @@ import string
 import os
 
 # ==========================================
-# أداة فحص ديسكورد المتقدمة - 24/7 مع عزل التوكنات التالفة
+# فاحص يوزرات ديسكورد الحقيقي - برتم ثابت وآمن (10-12 طلب/ث)
 # ==========================================
 
 TOKEN = os.getenv("TOKEN", "")
@@ -14,18 +14,22 @@ TOKEN = os.getenv("TOKEN", "")
 CHANNEL_URL = "https://discord.com/channels/1569068084982059129/1569818461792772228"
 WEBHOOK_URL = "https://discord.com/api/webhooks/1569827836041101323/LoLYfvNjEnarlvjEavVYL2-e7YQ30SlNTvfuFY502JQf4mUnwDiKYxip4SKvJ1GS501J"
 
-BATCH_SIZE = 10000       # حجم الدفعة الواحدة
+BATCH_SIZE = 10000       # حجم الدفعة
 USERNAME_LENGTH = 4      # طول اليوزر (رباعي)
 OUTPUT_FILE = "available_pro.txt"
+
+TARGET_REQUESTS_PER_SECOND = 12
 
 CHARS = string.ascii_lowercase + string.digits + "_"
 
 def generate_random_username(length):
-    """توليد يوزر عشوائي مطابق لشروط ديسكورد"""
+    """توليد يوزر عشوائي مطابق لشروط ديسكورد (يدعم . و _)"""
     while True:
         uname = "".join(random.choices(CHARS, k=length))
-        if not uname.startswith("_") and not uname.endswith("_") and "__" not in uname:
-            return uname
+        # شروط ديسكورد الأساسية للأسماء
+        if not uname.startswith(".") and not uname.endswith(".") and ".." not in uname:
+            if not uname.startswith("_") and not uname.endswith("_") and "__" not in uname:
+                return uname
 
 async def send_webhook(session, username):
     """إرسال التنبيه الفوري للروم عند صيد يوزر متاح"""
@@ -39,37 +43,38 @@ async def send_webhook(session, username):
         pass
 
 async def check_username(session, token, username, stats):
-    """فحص اليوزر مع معالجة ذكية وسريعة للـ Rate Limit والتوكنات"""
+    """فحص توفر اليوزر الحقيقي عبر نقطة نهاية ديسكورد المخصصة للأسماء"""
     headers = {
         "Authorization": token.strip(),
         "Content-Type": "application/json",
         "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
         "Accept": "*/*",
         "Accept-Language": "en-US,en;q=0.9",
-        "X-Super-Properties": "eyJvcyI6I3dpbmRvd3MiLCJicm93c2VyIjoiQ2hyb21lIn0=",
-        "X-Discord-Locale": "en-US"
     }
     
-    url = "https://discord.com/api/v10/users/@me"
+    # نقطة النهاية الصحيحة للتحقق من توفر اسم المستخدم في ديسكورد
+    url = f"https://discord.com/api/v10/users/@me/pomelo-attempt?username={username}"
 
     try:
         async with session.get(url, headers=headers) as resp:
             stats["checked"] += 1
+            
             if resp.status == 200:
-                stats["available"] += 1
-                with open(OUTPUT_FILE, "a", encoding="utf-8") as f:
-                    f.write(f"{username}\n")
-                print(f"\n[🎯 صيد متاح!] -> {username}")
-                await send_webhook(session, username)
+                data = await resp.json()
+                # الـ API يرجع taken: false إذا كان اليوزر متاحاً وغير مسجل!
+                if data.get("taken") is False:
+                    stats["available"] += 1
+                    with open(OUTPUT_FILE, "a", encoding="utf-8") as f:
+                        f.write(f"{username}\n")
+                    print(f"\n[🎯 صيد متاح!] -> {username}")
+                    await send_webhook(session, username)
                 return True
                 
             elif resp.status == 429:
                 stats["ratelimited"] += 1
-                # في حال الحظر، نرجع مؤشر خطأ عشان السكربت يبدل التوكن فوراً
                 return False
                 
             elif resp.status in (401, 403):
-                # توكن غير صالح أو محظور نهائياً، نرفضه
                 stats["dead_tokens"] += 1
                 return "DEAD"
             
@@ -78,40 +83,37 @@ async def check_username(session, token, username, stats):
         stats["errors"] += 1
         return False
 
-async def worker(worker_id, active_tokens, queue, stats):
-  """عامل فحص ديناميكي يسحب التوكنات الحية ويفحص الطابور"""
-  connector = aiohttp.TCPConnector(limit=30, force_close=True)
-  async with aiohttp.ClientSession(connector=connector) as session:
-    while not queue.empty():
-      if not active_tokens:
-        await asyncio.sleep(2.0)  # انتظار لو انتهت التوكنات مؤقتاً
-        continue
+async def worker(worker_id, active_tokens, queue, stats, rate_limiter):
+    """عامل فحص موزع برتم ثابت وآمن"""
+    connector = aiohttp.TCPConnector(limit=10, force_close=True)
+    async with aiohttp.ClientSession(connector=connector) as session:
+        while not queue.empty():
+            if not active_tokens:
+                await asyncio.sleep(2.0)
+                continue
 
-      # اختيار توكن دوري
-      token = active_tokens[worker_id % len(active_tokens)]
+            token = active_tokens[worker_id % len(active_tokens)]
 
-      try:
-        username = queue.get_nowait()
-      except asyncio.QueueEmpty:
-        break
+            try:
+                username = queue.get_nowait()
+            except asyncio.QueueEmpty:
+                break
 
-      result = await check_username(session, token, username, stats)
+            # تثبيت السرعة بالثانية بدقة
+            async with rate_limiter:
+                result = await check_username(session, token, username, stats)
+                await asyncio.sleep(1.0 / TARGET_REQUESTS_PER_SECOND)
 
-      if result == "DEAD":
-        # إزالة التوكن التالف من القائمة فوراً عشان ما يبطئ الشغل
-        if token in active_tokens:
-          active_tokens.remove(token)
-          print(
-              f"\n⚠️ [تحذير] تم استبعاد توكن تالف/محظور. التوكنات المتبقية:"
-              f" {len(active_tokens)}"
-          )
-      elif result is False:
-        # لو جاء 429، نعيد اليوزر للطابور ونعطي التوكن راحة قصيرة
-        await queue.put(username)
-        await asyncio.sleep(0.5)
+            if result == "DEAD":
+                if token in active_tokens:
+                    active_tokens.remove(token)
+                    print(f"\n⚠️ [تحذير] استبعاد توكن تالف/محظور. المتبقي: {len(active_tokens)}")
+            elif result is False:
+                # لو جاء لمتد بسيط، نعيد اليوزر للطابور ونهدي شوي
+                await queue.put(username)
+                await asyncio.sleep(1.0)
 
-      queue.task_done()
-
+            queue.task_done()
 
 async def main():
     if not TOKEN:
@@ -119,19 +121,19 @@ async def main():
         return
 
     tokens_list = [t.strip() for t in TOKEN.split(",") if t.strip()]
-    print(f"🚀 بدء التشغيل المستمر (24/7). عدد التوكنات الإجمالي: {len(tokens_list)}")
+    print(f"🚀 بدء فحص اليوزرات الحقيقي برتم ثابت ({TARGET_REQUESTS_PER_SECOND} طلب/ث). التوكنات: {len(tokens_list)}")
 
+    rate_limiter = asyncio.Semaphore(TARGET_REQUESTS_PER_SECOND)
     batch_number = 1
 
     while True:
-        # نسختة حية للتوكنات عشان نقدر نحذف منها وقت الحظر بدون ما نخرب القائمة الأصلية
         current_active_tokens = list(tokens_list)
         if not current_active_tokens:
-            print("❌ لا توجد توكنات فعالة حالياً!")
+            print("❌ لا توجد توكنات فعالة!")
             await asyncio.sleep(5)
             continue
 
-        print(f"\n🎲 [الدفعة #{batch_number}] جاري توليد وتجهيز ({BATCH_SIZE}) يوزر عشوائي جديد...")
+        print(f"\n🎲 [الدفعة #{batch_number}] جاري توليد ({BATCH_SIZE}) يوزر...")
         
         usernames_queue = asyncio.Queue()
         generated_set = set()
@@ -151,9 +153,9 @@ async def main():
         }
 
         start_time = time.time()
-        workers_count = len(current_active_tokens) * 8
+        workers_count = min(len(current_active_tokens) * 3, 15)
 
-        tasks = [asyncio.create_task(worker(i, current_active_tokens, usernames_queue, stats)) for i in range(workers_count)]
+        tasks = [asyncio.create_task(worker(i, current_active_tokens, usernames_queue, stats, rate_limiter)) for i in range(workers_count)]
 
         while not usernames_queue.empty() and current_active_tokens:
             elapsed = time.time() - start_time
