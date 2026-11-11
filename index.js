@@ -2,7 +2,7 @@ const { Client: BotClient, GatewayIntentBits } = require('discord.js');
 const { Client: SelfClient } = require('discord.js-selfbot-v13');
 const { joinVoiceChannel, createAudioPlayer, createAudioResource, AudioPlayerStatus } = require('@discordjs/voice');
 const axios = require('axios');
-const ffmpeg = require('ffmpeg-static'); // 👈 الإضافة السحرية هنا
+const ffmpeg = require('ffmpeg-static');
 
 const bot = new BotClient({
     intents: [
@@ -64,20 +64,40 @@ bot.on('messageCreate', async message => {
                 let audioStreamUrl = url;
 
                 if (url.includes('tiktok.com')) {
+                    let success = false;
+                    
+                    // المحاولة الأولى عبر tikwm
                     try {
-                        const apiRes = await axios.get(`https://tikwm.com/api/?url=${encodeURIComponent(url)}`);
+                        const apiRes = await axios.get(`https://tikwm.com/api/?url=${encodeURIComponent(url)}`, { timeout: 5000 });
                         if (apiRes.data && apiRes.data.data && apiRes.data.data.play) {
                             audioStreamUrl = apiRes.data.data.play;
-                        } else {
-                            throw new Error("تعذر استخراج رابط تيك توك المباشر.");
+                            success = true;
                         }
-                    } catch (err) {
-                        throw new Error("فشل الاتصال بخدمة فك روابط تيك توك.");
+                    } catch (e) {
+                        // تجاهل والانتقال للبديل
+                    }
+
+                    // المحاولة الثانية عبر بديل آمن لو الأولى فشلت
+                    if (!success) {
+                        try {
+                            const altRes = await axios.get(`https://www.tikwm.com/api/?url=${encodeURIComponent(url)}&hd=1`, { timeout: 5000 });
+                            if (altRes.data && altRes.data.data && altRes.data.data.play) {
+                                audioStreamUrl = altRes.data.data.play;
+                                success = true;
+                            }
+                        } catch (e) {
+                            // تجاهل
+                        }
+                    }
+
+                    if (!success) {
+                        throw new Error("تعذر جلب رابط تيك توك، قد يكون المقطع محذوفاً أو الحساب خاصاً.");
                     }
                 }
 
                 const resource = createAudioResource(audioStreamUrl, {
-                    inlineVolume: true
+                    inlineVolume: true,
+                    executable: ffmpeg
                 });
 
                 resource.volume.setVolume(vol);
