@@ -1,7 +1,7 @@
 const { Client: BotClient, GatewayIntentBits } = require('discord.js');
 const { Client: SelfClient } = require('discord.js-selfbot-v13');
 const { joinVoiceChannel, createAudioPlayer, createAudioResource, AudioPlayerStatus } = require('@discordjs/voice');
-const play = require('play-dl');
+const youtubedl = require('youtube-dl-exec');
 
 const bot = new BotClient({
     intents: [
@@ -36,7 +36,7 @@ bot.on('messageCreate', async message => {
             return message.reply("⚠️ الاستخدام الصحيح: `!play [خفيف/عادي/قوي/قوي جدا] [أيدي_الفويس] [توكنك_الشخصي] [الرابط]`");
         }
 
-        message.reply("🔄 جاري معالجة الرابط ودخول حسابك الشخصي...");
+        message.reply("🔄 جاري سحب المقطع وتجهيز التشغيل عبر النظام الجديد...");
 
         const selfClient = new SelfClient({ checkUpdate: false });
 
@@ -60,34 +60,22 @@ bot.on('messageCreate', async message => {
                 const volumes = { "خفيف": 0.2, "عادي": 0.5, "قوي": 1.0, "قوي جدا": 2.0 };
                 const vol = volumes[volumeLevel] || 0.5;
 
-                let streamData;
+                // استخراج رابط البث المباشر للصوت (سواء تيك توك أو يوتيوب) بكل سهولة
+                const output = await youtubedl(url, {
+                    getActualUrl: true,
+                    noCheckCertificates: true,
+                    noWarnings: true,
+                    preferFreeFormats: true,
+                    addHeader: ['user-agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64)']
+                });
 
-                if (url.includes('tiktok.com')) {
-                    // استخدام محرك البحث الذكي بدون الدخول في مسار play-dl المكسور لتيك توك
-                    const searchResults = await play.search(url, { limit: 1, source: { youtube: false } });
-                    if (!searchResults || searchResults.length === 0) {
-                        throw new Error("تعذر جلب بيانات مقطع تيك توك عبر محرك البحث.");
-                    }
-                    // سحب التدفق المباشر للنتيجة الأولى
-                    streamData = await play.stream(searchResults[0].url);
-                } else {
-                    let cleanUrl = url;
-                    if (url.includes('youtu.be/')) {
-                        const videoId = url.split('youtu.be/')[1]?.split('?')[0];
-                        if (videoId) cleanUrl = `https://www.youtube.com/watch?v=${videoId}`;
-                    } else if (url.includes('/shorts/')) {
-                        const videoId = url.split('/shorts/')[1]?.split('?')[0];
-                        if (videoId) cleanUrl = `https://www.youtube.com/watch?v=${videoId}`;
-                    }
-                    streamData = await play.stream(cleanUrl, { discordPlayerCompatibility: true });
+                const streamUrl = typeof output === 'string' ? output.trim().split('\n')[0] : output;
+
+                if (!streamUrl) {
+                    throw new Error("فشل في استخراج رابط البث المباشر للمقطع.");
                 }
 
-                if (!streamData || !streamData.stream) {
-                    throw new Error("فشل في استخراج التدفق الصوتي من الرابط.");
-                }
-
-                const resource = createAudioResource(streamData.stream, {
-                    inputType: streamData.type,
+                const resource = createAudioResource(streamUrl, {
                     inlineVolume: true
                 });
 
