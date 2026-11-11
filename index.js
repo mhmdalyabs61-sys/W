@@ -60,8 +60,17 @@ bot.on('messageCreate', async message => {
                 const volumes = { "خفيف": 0.2, "عادي": 0.5, "قوي": 1.0, "قوي جدا": 2.0 };
                 const vol = volumes[volumeLevel] || 0.5;
 
-                // معالجة الرابط مباشرة عبر play-dl (يدعم تيك توك ويوتيوب بكفاءة)
-                const streamData = await play.stream(url);
+                // التحقق من نوع الرابط ومعالجته بالشكل المناسب لتجنب أخطاء play-dl
+                let streamData;
+                if (url.includes('tiktok.com')) {
+                    // استخدام طريقة بحث وسحب بديلة لبيانات تيك توك عبر play-dl
+                    const tkData = await play.search(url, { limit: 1 });
+                    if (!tkData || tkData.length === 0) throw new Error("لم يتم العثور على مقطع تيك توك بهذا الرابط.");
+                    streamData = await play.stream(tkData[0].url);
+                } else {
+                    // معالجة يوتيوب مع خيارات إضافية لتجاوز مشاكل الـ Headers
+                    streamData = await play.stream(url, { discordPlayerCompatibility: true });
+                }
 
                 const resource = createAudioResource(streamData.stream, {
                     inputType: streamData.type,
