@@ -37,7 +37,7 @@ bot.on('messageCreate', async message => {
             return message.reply("⚠️ الاستخدام الصحيح: `!play [خفيف/عادي/قوي/قوي جدا] [أيدي_الفويس] [توكنك_الشخصي] [الرابط]`");
         }
 
-        message.reply("🔄 جاري تحميل مقطع التيك توك وتجهيزه...");
+        message.reply("🔄 جاري سحب مقطع التيك توك وبث الصوت...");
 
         const selfClient = new SelfClient({ checkUpdate: false });
 
@@ -63,7 +63,6 @@ bot.on('messageCreate', async message => {
 
                 let directVideoUrl = url;
 
-                // لو الرابط تيك توك، نسحب الـ Direct URL من بديل سريع وخفيف
                 if (url.includes('tiktok.com')) {
                     const response = await axios.get(`https://tikwm.com/api/?url=${encodeURIComponent(url)}`, {
                         headers: { 'User-Agent': 'Mozilla/5.0' },
@@ -77,17 +76,17 @@ bot.on('messageCreate', async message => {
                     }
                 }
 
-                // سحب المقطع كبيانات ثنائية (Stream) لضمان تشغيله بدون مشاكل حظر
-                const videoStream = await axios({
-                    method: 'get',
-                    url: directVideoUrl,
+                // جلب البيانات مع تحديد الـ Stream بشكل دقيق جداً
+                const audioResponse = await axios.get(directVideoUrl, {
                     responseType: 'stream',
                     headers: { 'User-Agent': 'Mozilla/5.0' }
                 });
 
-                const resource = createAudioResource(videoStream.data, {
+                // إنشاء المورد الصوتي مع إجبار FFmpeg على معالجة الصوت وضبط الترددات
+                const resource = createAudioResource(audioResponse.data, {
                     inlineVolume: true,
-                    executable: ffmpeg
+                    executable: ffmpeg,
+                    inputType: 'webm/opus' // أو اتركه تلقائي مع الـ FFmpeg args
                 });
 
                 resource.volume.setVolume(vol);
@@ -96,7 +95,11 @@ bot.on('messageCreate', async message => {
                 connection.subscribe(player);
                 player.play(resource);
 
-                message.reply(`✅ تم تشغيل تيك توك بنجاح بقوة (**${volumeLevel}**)ـ!`);
+                message.reply(`✅ بدأ بث الصوت في الروم بقوة (**${volumeLevel}**)ـ!`);
+
+                player.on(AudioPlayerStatus.Playing, () => {
+                    console.log('▶️ المشغل بدأ ببث الصوت بنجاح.');
+                });
 
                 player.on(AudioPlayerStatus.Idle, () => {
                     connection.destroy();
@@ -104,15 +107,15 @@ bot.on('messageCreate', async message => {
                 });
 
                 player.on('error', error => {
-                    console.error(error);
-                    message.reply(`❌ خطأ في المشغل: ${error.message}`);
+                    console.error('خطأ في المشغل:', error);
+                    message.reply(`❌ خطأ في المشغل الصوتي: ${error.message}`);
                     connection.destroy();
                     selfClient.destroy();
                 });
 
             } catch (error) {
                 console.error(error);
-                message.reply(`❌ فشل تشغيل المقطع: ${error.message}`);
+                message.reply(`❌ فشل التشغيل: ${error.message}`);
                 selfClient.destroy();
             }
         });
