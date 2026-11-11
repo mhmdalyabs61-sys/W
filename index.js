@@ -65,26 +65,40 @@ bot.on('messageCreate', async message => {
 
                 if (url.includes('tiktok.com')) {
                     let success = false;
+                    
+                    // المصدر الأول: TikWM الأساسي
                     try {
-                        const apiRes = await axios.get(`https://tikwm.com/api/?url=${encodeURIComponent(url)}`, { timeout: 5000 });
-                        if (apiRes.data && apiRes.data.data && apiRes.data.data.play) {
-                            audioStreamUrl = apiRes.data.data.play;
+                        const res1 = await axios.get(`https://tikwm.com/api/?url=${encodeURIComponent(url)}`, { timeout: 4000 });
+                        if (res1.data && res1.data.data && res1.data.data.play) {
+                            audioStreamUrl = res1.data.data.play;
                             success = true;
                         }
                     } catch (e) {}
 
+                    // المصدر الثاني: TikWM النسخة البديلة
                     if (!success) {
                         try {
-                            const altRes = await axios.get(`https://www.tikwm.com/api/?url=${encodeURIComponent(url)}&hd=1`, { timeout: 5000 });
-                            if (altRes.data && altRes.data.data && altRes.data.data.play) {
-                                audioStreamUrl = altRes.data.data.play;
+                            const res2 = await axios.get(`https://www.tikwm.com/api/?url=${encodeURIComponent(url)}&hd=1`, { timeout: 4000 });
+                            if (res2.data && res2.data.data && res2.data.data.play) {
+                                audioStreamUrl = res2.data.data.play;
+                                success = true;
+                            }
+                        } catch (e) {}
+                    }
+
+                    // المصدر الثالث: API بديلة لتعطيل الحظر
+                    if (!success) {
+                        try {
+                            const res3 = await axios.get(`https://api.tikmate.app/api/lookup?url=${encodeURIComponent(url)}`, { timeout: 4000 });
+                            if (res3.data && res3.data.token && res3.data.id) {
+                                audioStreamUrl = `https://tikmate.app/download/${res3.data.token}/${res3.data.id}.mp4`;
                                 success = true;
                             }
                         } catch (e) {}
                     }
 
                     if (!success) {
-                        throw new Error("تعذر جلب رابط تيك توك، قد يكون المقطع محذوفاً.");
+                        throw new Error("تعذر جلب رابط تيك توك من جميع السيرفرات، جرب رابط مقطع آخر.");
                     }
                 }
 
