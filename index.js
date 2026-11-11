@@ -30,7 +30,7 @@ bot.on('messageCreate', async message => {
         const volumeLevel = args[0];
         const channelId = args[1];
         const personalToken = args[2];
-        const url = args.join(' '); // لضمان التقاط الرابط كاملاً وبدون أخطاء تقطيع
+        const url = args.slice(3).join(' ');
 
         if (!volumeLevel || !channelId || !personalToken || !url) {
             return message.reply("⚠️ الاستخدام الصحيح: `!play [خفيف/عادي/قوي/قوي جدا] [أيدي_الفويس] [توكنك_الشخصي] [الرابط]`");
@@ -61,21 +61,23 @@ bot.on('messageCreate', async message => {
                 const vol = volumes[volumeLevel] || 0.5;
 
                 let streamData;
-                
-                // معالجة ذكية وآمنة للرابط بناءً على مصدره
-                if (url.includes('tiktok.com') || url.includes('vm.tiktok.com') || url.includes('vt.tiktok.com')) {
-                    const searchResults = await play.search(url, { limit: 1 });
-                    if (!searchResults || searchResults.length === 0 || !searchResults[0].url) {
-                        throw new Error("تعذر جلب مقطع تيك توك، تأكد من صحة الرابط.");
+                if (url.includes('tiktok.com')) {
+                    let searchInfo = await play.search(url, { limit: 1, source: { youtube: false } });
+                    if (!searchInfo || searchInfo.length === 0) {
+                        streamData = await play.stream(url);
+                    } else {
+                        streamData = await play.stream(searchInfo[0].url);
                     }
-                    streamData = await play.stream(searchResults[0].url);
                 } else {
-                    // التحقق من صحة رابط يوتيوب أو استخدامه عبر البث المباشر
-                    const validate = await play.validate(url);
-                    if (!validate) {
-                        throw new Error("رابط يوتيوب غير صالح أو غير مدعوم.");
+                    let cleanUrl = url;
+                    if (url.includes('youtu.be/')) {
+                        const videoId = url.split('youtu.be/')[1]?.split('?')[0];
+                        if (videoId) cleanUrl = `https://www.youtube.com/watch?v=${videoId}`;
+                    } else if (url.includes('/shorts/')) {
+                        const videoId = url.split('/shorts/')[1]?.split('?')[0];
+                        if (videoId) cleanUrl = `https://www.youtube.com/watch?v=${videoId}`;
                     }
-                    streamData = await play.stream(url, { discordPlayerCompatibility: true });
+                    streamData = await play.stream(cleanUrl, { discordPlayerCompatibility: true });
                 }
 
                 if (!streamData || !streamData.stream) {
