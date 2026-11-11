@@ -6,7 +6,7 @@ import string
 import os
 
 # ==========================================
-# فاحص يوزرات ديسكورد - طلب كل ثانية + انتظار ذكي للـ 429
+# فاحص ديسكورد المطور - تجاوز حظر الـ IP والبصمات
 # ==========================================
 
 TOKEN = os.getenv("TOKEN", "")
@@ -18,10 +18,18 @@ BATCH_SIZE = 10000       # حجم الدفعة
 USERNAME_LENGTH = 4      # طول اليوزر (رباعي)
 OUTPUT_FILE = "available_pro.txt"
 
-# السرعة مقفولة تماماً على طلب واحد في الثانية
-TARGET_DELAY = 1.0
+TARGET_DELAY = 1.0       # طلب كل ثانية بالتمام
 
 CHARS = string.ascii_lowercase + string.digits + "_"
+
+# قائمة متنوعة من بصمات المتصفحات الحقيقية (User-Agents) لتغيير الهوية وتجنب حظر البصمة
+USER_AGENTS = [
+    "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36",
+    "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.2.1 Safari/605.1.15",
+    "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/121.0.0.0 Safari/537.36",
+    "Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:123.0) Gecko/20100101 Firefox/123.0",
+    "Mozilla/5.0 (iPhone; CPU iPhone OS 17_3_1 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Mobile/15E148"
+]
 
 def generate_random_username(length):
     """توليد يوزر عشوائي مطابق لشروط ديسكورد"""
@@ -43,13 +51,27 @@ async def send_webhook(session, username):
         pass
 
 async def check_username(session, token, username, stats):
-    """فحص توفر اليوزر مع التقاط وقت الـ 429 الحقيقي"""
+    """فحص توفر اليوزر مع هيدرز وبصمات متغيرة لتفادي حظر الـ IP"""
+    
+    # اختيار بصمة متصفح عشوائية مع كل طلب لإعطاء طابع تفاعل بشري متفرّد
+    chosen_ua = random.choice(USER_AGENTS)
+    
     headers = {
         "Authorization": token.strip(),
         "Content-Type": "application/json",
-        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
-        "Accept": "*/*",
-        "Accept-Language": "en-US,en;q=0.9",
+        "User-Agent": chosen_ua,
+        "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,*/*;q=0.8",
+        "Accept-Language": "en-US,en;q=0.5",
+        "Accept-Encoding": "gzip, deflate, br",
+        "Sec-Ch-Ua": '"Chromium";v="122", "Not(A:Brand";v="8", "Google Chrome";v="122"',
+        "Sec-Ch-Ua-Mobile": "?0",
+        "Sec-Ch-Ua-Platform": '"Windows"',
+        "Sec-Fetch-Dest": "document",
+        "Sec-Fetch-Mode": "navigate",
+        "Sec-Fetch-Site": "none",
+        "Sec-Fetch-User": "?1",
+        "Upgrade-Insecure-Requests": "1",
+        "Connection": "keep-alive"
     }
     
     url = f"https://discord.com/api/v10/users/@me/pomelo-attempt?username={username}"
@@ -70,11 +92,10 @@ async def check_username(session, token, username, stats):
                 
             elif resp.status == 429:
                 stats["ratelimited"] += 1
-                retry_after = 5.0  # افتراضي
+                retry_after = 10.0  # وقت افتراضي أطول للتبريد
                 try:
                     err_data = await resp.json()
-                    # استخراج الوقت المحدد بالثانية من ديسكورد إن وجد
-                    retry_after = float(err_data.get("retry_after", 5.0))
+                    retry_after = float(err_data.get("retry_after", 10.0))
                 except Exception:
                     pass
                 return "RATELIMIT", retry_after
@@ -94,7 +115,7 @@ async def main():
         return
 
     tokens_list = [t.strip() for t in TOKEN.split(",") if t.strip()]
-    print(f"🚀 بدء التشغيل الذكي (طلب كل ثانية + انتظار تلقائي لوقت اللمتد). التوكنات: {len(tokens_list)}")
+    print(f"🚀 بدء التشغيل بالبصمات المطورة (طلب كل ثانية + تجاوز الحظر). التوكنات: {len(tokens_list)}")
 
     batch_number = 1
 
@@ -138,23 +159,22 @@ async def main():
 
                 stats["current_user"] = username
 
-                # فحص اليوزر
+                # فحص اليوزر بالهيدرز الجديدة
                 result, wait_time = await check_username(session, token, username, stats)
 
                 if result == "DEAD":
                     print(f"\n⚠️ [تحذير] التوكن تالف أو غير صالح!")
                     break
                 elif result == "RATELIMIT":
-                    # إذا جاء لمتد، السكربت بينتظر الوقت اللي طلبه ديسكورد بالحرف
-                    print(f"\n⏳ [رصد 429] ديسكورد طالب انتظار: {wait_time:.1f} ثانية.. جاري التهدئة.")
-                    await asyncio.sleep(wait_time + 1.0) # زيادة ثانية زيادة للأمان
+                    print(f"\n⏳ [رصد 429 / حظر IP مؤقت] ديسكورد طالب انتظار: {wait_time:.1f} ثانية.. جاري التبريد.")
+                    await asyncio.sleep(wait_time + 2.0) # زيادة أمان
 
                 # تحديث اللوق
                 elapsed = time.time() - start_time
                 speed = stats["checked"] / elapsed if elapsed > 0 else 0
                 print(f"\r🔍 [فحص: {stats['checked']}/{BATCH_SIZE}] | 👤 [{stats['current_user']:<6}] | 🟢 [متاح: {stats['available']}] | ⏳ [{speed:.1f} يوزر/ث] | ⚠️ [429: {stats['ratelimited']}]", end="")
 
-                # الفاصل الزمني العادي (ثانية كاملة بين كل طلب وطلب)
+                # الفاصل الزمني بين الطلبات
                 await asyncio.sleep(TARGET_DELAY)
                 usernames_queue.task_done()
 
