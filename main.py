@@ -6,7 +6,7 @@ import string
 import os
 
 # ==========================================
-# فاحص يوزرات ديسكورد - سرعة هادئة وآمنة (1 طلب/ثانية)
+# فاحص يوزرات ديسكورد - طلب كل ثانية + انتظار ذكي للـ 429
 # ==========================================
 
 TOKEN = os.getenv("TOKEN", "")
@@ -18,8 +18,8 @@ BATCH_SIZE = 10000       # حجم الدفعة
 USERNAME_LENGTH = 4      # طول اليوزر (رباعي)
 OUTPUT_FILE = "available_pro.txt"
 
-# السرعة مقفولة حصرياً على طلب واحد في الثانية بناءً على طلبك
-TARGET_REQUESTS_PER_SECOND = 1
+# السرعة مقفولة تماماً على طلب واحد في الثانية
+TARGET_DELAY = 1.0
 
 CHARS = string.ascii_lowercase + string.digits + "_"
 
@@ -43,7 +43,7 @@ async def send_webhook(session, username):
         pass
 
 async def check_username(session, token, username, stats):
-    """فحص توفر اليوزر الحقيقي عبر نقطة نهاية ديسكورد"""
+    """فحص توفر اليوزر مع التقاط وقت الـ 429 الحقيقي"""
     headers = {
         "Authorization": token.strip(),
         "Content-Type": "application/json",
@@ -66,20 +66,27 @@ async def check_username(session, token, username, stats):
                         f.write(f"{username}\n")
                     print(f"\n[🎯 صيد متاح!] -> {username}")
                     await send_webhook(session, username)
-                return "OK"
+                return "OK", 0
                 
             elif resp.status == 429:
                 stats["ratelimited"] += 1
-                return "RATELIMIT"
+                retry_after = 5.0  # افتراضي
+                try:
+                    err_data = await resp.json()
+                    # استخراج الوقت المحدد بالثانية من ديسكورد إن وجد
+                    retry_after = float(err_data.get("retry_after", 5.0))
+                except Exception:
+                    pass
+                return "RATELIMIT", retry_after
                 
             elif resp.status in (401, 403):
                 stats["dead_tokens"] += 1
-                return "DEAD"
+                return "DEAD", 0
             
-            return "OK"
+            return "OK", 0
     except Exception:
         stats["errors"] += 1
-        return "ERROR"
+        return "ERROR", 0
 
 async def main():
     if not TOKEN:
@@ -87,7 +94,7 @@ async def main():
         return
 
     tokens_list = [t.strip() for t in TOKEN.split(",") if t.strip()]
-    print(f"🚀 بدء التشغيل برتم فائق الأمان (طلب واحد كل ثانية). التوكنات: {len(tokens_list)}")
+    print(f"🚀 بدء التشغيل الذكي (طلب كل ثانية + انتظار تلقائي لوقت اللمتد). التوكنات: {len(tokens_list)}")
 
     batch_number = 1
 
@@ -131,26 +138,27 @@ async def main():
 
                 stats["current_user"] = username
 
-                # تنفيذ الطلب
-                result = await check_username(session, token, username, stats)
+                # فحص اليوزر
+                result, wait_time = await check_username(session, token, username, stats)
 
                 if result == "DEAD":
-                    print(f"\n⚠️ [تحذير] التوكن تالف أو محظور!")
+                    print(f"\n⚠️ [تحذير] التوكن تالف أو غير صالح!")
                     break
                 elif result == "RATELIMIT":
-                    print(f"\n⚠️ [تنبيه] تم رصد 429، جاري الانتظار 5 ثواني...")
-                    await asyncio.sleep(5.0)
+                    # إذا جاء لمتد، السكربت بينتظر الوقت اللي طلبه ديسكورد بالحرف
+                    print(f"\n⏳ [رصد 429] ديسكورد طالب انتظار: {wait_time:.1f} ثانية.. جاري التهدئة.")
+                    await asyncio.sleep(wait_time + 1.0) # زيادة ثانية زيادة للأمان
 
-                # تحديث العداد واللوق على الشاشة
+                # تحديث اللوق
                 elapsed = time.time() - start_time
                 speed = stats["checked"] / elapsed if elapsed > 0 else 0
                 print(f"\r🔍 [فحص: {stats['checked']}/{BATCH_SIZE}] | 👤 [{stats['current_user']:<6}] | 🟢 [متاح: {stats['available']}] | ⏳ [{speed:.1f} يوزر/ث] | ⚠️ [429: {stats['ratelimited']}]", end="")
 
-                # فرض التوقف الثابت: طلب واحد بالضبط كل ثانية
-                await asyncio.sleep(1.0)
+                # الفاصل الزمني العادي (ثانية كاملة بين كل طلب وطلب)
+                await asyncio.sleep(TARGET_DELAY)
                 usernames_queue.task_done()
 
-        print(f"\n✅ انتهت الدفعة #{batch_number}!")
+        print(f"\n✅ انتهت الدفعة #{batch_number} بنجاح!")
         batch_number += 1
 
 if __name__ == "__main__":
