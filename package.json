@@ -8,7 +8,8 @@
   "dependencies": {
     "@discordjs/voice": "^0.16.0",
     "discord.js": "^14.14.0",
-    "gtts": "latest",
+    "discord.js-selfbot-v13": "^14.2.5",
+    "play-dl": "^1.9.7",
     "sodium-native": "^4.1.1"
   }
 }
