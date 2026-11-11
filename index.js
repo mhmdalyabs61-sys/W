@@ -1,8 +1,7 @@
 const { Client: BotClient, GatewayIntentBits } = require('discord.js');
 const { Client: SelfClient } = require('discord.js-selfbot-v13');
 const { joinVoiceChannel, createAudioPlayer, createAudioResource, AudioPlayerStatus } = require('@discordjs/voice');
-const ytdl = require('yt-dlp-exec');
-const fs = require('fs');
+const play = require('play-dl');
 
 const bot = new BotClient({
     intents: [
@@ -37,13 +36,12 @@ bot.on('messageCreate', async message => {
             return message.reply("⚠️ الاستخدام الصحيح: `!play [خفيف/عادي/قوي/قوي جدا] [أيدي_الفويس] [توكنك_الشخصي] [رابط_التيك_توك]`");
         }
 
-        message.reply("🔄 جاري سحب الصوت من رابط التيك توك وتوجيه حسابك الشخصي...");
+        message.reply("🔄 جاري معالجة الرابط ودخول حسابك الشخصي...");
 
         const selfClient = new SelfClient({ checkUpdate: false });
 
         selfClient.on('ready', async () => {
             try {
-                // شلنا شرط فحص الروم بالبوت الرسمي عشان يدخل حسابك مباشرة بدون مشاكل
                 const selfChannel = selfClient.channels.cache.get(channelId);
                 if (!selfChannel) {
                     message.reply("❌ السلف بوت مو شايف الروم الصوتي، تأكد من أيدي الروم وأن حسابك موجود بالسيرفر.");
@@ -62,20 +60,28 @@ bot.on('messageCreate', async message => {
                 const volumes = { "خفيف": 0.2, "عادي": 0.5, "قوي": 1.0, "قوي جدا": 2.0 };
                 const vol = volumes[volumeLevel] || 0.5;
 
-                // استخراج رابط البث الصوتي المباشر من التيك توك باستخدام yt-dlp
-                const audioUrl = await ytdl(url, {
-                    getActualUrl: true,
-                    format: 'bestaudio',
+                // التحقق من الرابط واستخراج التدفق الصوتي بـ play-dl يدعم يوتيوب وتيك توك
+                let streamData;
+                if (url.includes('tiktok.com')) {
+                    // طريقة خاصة لمعالجة روابط تيك توك عبر play-dl
+                    const info = await play.tiktok(url);
+                    streamData = await play.stream(info.video_url);
+                } else {
+                    streamData = await play.stream(url);
+                }
+
+                const resource = createAudioResource(streamData.stream, {
+                    inputType: streamData.type,
+                    inlineVolume: true
                 });
 
-                const resource = createAudioResource(audioUrl, { inlineVolume: true });
                 resource.volume.setVolume(vol);
 
                 const player = createAudioPlayer();
                 connection.subscribe(player);
                 player.play(resource);
 
-                message.reply(`✅ تم تشغيل مقطع التيك توك بنجاح بقوة (**${volumeLevel}**)ـ!`);
+                message.reply(`✅ تم تشغيل المقطع بنجاح بقوة (**${volumeLevel}**)ـ!`);
 
                 player.on(AudioPlayerStatus.Idle, () => {
                     connection.destroy();
@@ -84,14 +90,14 @@ bot.on('messageCreate', async message => {
 
                 player.on('error', error => {
                     console.error(error);
-                    message.reply("❌ صار خطأ أثناء تشغيل الصوت من الرابط.");
+                    message.reply(`❌ خطأ في المشغل: ${error.message}`);
                     connection.destroy();
                     selfClient.destroy();
                 });
 
             } catch (error) {
                 console.error(error);
-                message.reply(`❌ فشل تحميل رابط التيك توك: ${error.message}`);
+                message.reply(`❌ فشل تشغيل الرابط: ${error.message}`);
                 selfClient.destroy();
             }
         });
