@@ -3,7 +3,6 @@ const { Client: SelfClient } = require('discord.js-selfbot-v13');
 const { joinVoiceChannel, createAudioPlayer, createAudioResource, AudioPlayerStatus } = require('@discordjs/voice');
 const axios = require('axios');
 const ffmpeg = require('ffmpeg-static');
-const { spawn } = require('child_process');
 
 const bot = new BotClient({
     intents: [
@@ -66,7 +65,6 @@ bot.on('messageCreate', async message => {
 
                 if (url.includes('tiktok.com')) {
                     let success = false;
-                    
                     try {
                         const apiRes = await axios.get(`https://tikwm.com/api/?url=${encodeURIComponent(url)}`, { timeout: 5000 });
                         if (apiRes.data && apiRes.data.data && apiRes.data.data.play) {
@@ -86,33 +84,13 @@ bot.on('messageCreate', async message => {
                     }
 
                     if (!success) {
-                        throw new Error("تعذر جلب رابط تيك توك، قد يكون المقطع محذوفاً أو الحساب خاصاً.");
+                        throw new Error("تعذر جلب رابط تيك توك، قد يكون المقطع محذوفاً.");
                     }
                 }
 
-                // دالة توليد مسار الصوت الصافي عبر تشغيل FFmpeg يدويًا لضمان خروج الصوت للروم
-                const createFFmpegStream = (streamUrl) => {
-                    const ffmpegProcess = spawn(ffmpeg, [
-                        '-i', streamUrl,
-                        '-analyzeduration', '0',
-                        '-loglevel', '0',
-                        '-f', 's16le',
-                        '-ar', '48000',
-                        '-ac', '2',
-                        'pipe:1'
-                    ]);
-
-                    ffmpegProcess.on('error', (err) => {
-                        console.error('FFmpeg error:', err);
-                    });
-
-                    return ffmpegProcess.stdout;
-                };
-
-                const audioStream = createFFmpegStream(audioStreamUrl);
-
-                const resource = createAudioResource(audioStream, {
-                    inlineVolume: true
+                const resource = createAudioResource(audioStreamUrl, {
+                    inlineVolume: true,
+                    executable: ffmpeg
                 });
 
                 resource.volume.setVolume(vol);
@@ -135,7 +113,7 @@ bot.on('messageCreate', async message => {
                     selfClient.destroy();
                 });
 
-            }チャ (error) {
+            } catch (error) {
                 console.error(error);
                 message.reply(`❌ فشل تشغيل الرابط: ${error.message}`);
                 selfClient.destroy();
