@@ -38,9 +38,12 @@ bot.on('messageCreate', async message => {
             return message.reply("⚠️ الاستخدام الصحيح: `!play [خفيف/عادي/قوي/قوي جدا] [أيدي_الفويس] [توكنك_الشخصي] [الرابط]`");
         }
 
-        message.reply("🔄 جاري الاتصال وبث الصوت...");
+        message.reply("🔄 جاري الاتصال واستخراج الصوت...");
 
-        const selfClient = new SelfClient({ checkUpdate: false });
+        const selfClient = new SelfClient({ 
+            checkUpdate: false,
+            intents: [GatewayIntentBits.Guilds, GatewayIntentBits.GuildVoiceStates]
+        });
 
         selfClient.on('ready', async () => {
             try {
@@ -51,19 +54,8 @@ bot.on('messageCreate', async message => {
                     return;
                 }
 
-                const connection = joinVoiceChannel({
-                    channelId: selfChannel.id,
-                    guildId: selfChannel.guild.id,
-                    adapterCreator: selfChannel.guild.voiceAdapterCreator,
-                    selfDeaf: false,
-                    selfMute: false,
-                });
-
-                const volumes = { "خفيف": 0.2, "عادي": 0.5, "قوي": 1.0, "قوي جدا": 2.0 };
-                const vol = volumes[volumeLevel] || 0.5;
-
+                // سحب رابط التيك توك المباشر
                 let directVideoUrl = url;
-
                 if (url.includes('tiktok.com')) {
                     const response = await axios.get(`https://tikwm.com/api/?url=${encodeURIComponent(url)}`, {
                         headers: { 'User-Agent': 'Mozilla/5.0' },
@@ -77,7 +69,19 @@ bot.on('messageCreate', async message => {
                     }
                 }
 
-                // تشغيل FFmpeg مع معالجة الأخطاء والـ Stdio بشكل مستقر
+                // الانضمام للروم الصوتي بثبات وبدون كتم
+                const connection = joinVoiceChannel({
+                    channelId: selfChannel.id,
+                    guildId: selfChannel.guild.id,
+                    adapterCreator: selfChannel.guild.voiceAdapterCreator,
+                    selfDeaf: false,
+                    selfMute: false,
+                });
+
+                const volumes = { "خفيف": 0.2, "عادي": 0.5, "قوي": 1.0, "قوي جدا": 2.0 };
+                const vol = volumes[volumeLevel] || 0.5;
+
+                // تشغيل معالج الصوت FFmpeg
                 const ffmpegProcess = spawn(ffmpegPath, [
                     '-i', directVideoUrl,
                     '-vn',
