@@ -10,6 +10,6 @@
     "discord.js": "^14.14.1",
     "discord.js-selfbot-v13": "^13.15.1",
     "prism-media": "^1.3.5",
-    "youtube-dl-exec": "^2.4.12"
+    "play-dl": "^1.9.7"
   }
 }
