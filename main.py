@@ -6,7 +6,7 @@ import string
 import os
 
 # ==========================================
-# فاحص يوزرات ديسكورد الحقيقي - برتم ثابت وآمن (10-12 طلب/ث)
+# فاحص يوزرات ديسكورد مع طباعة اليوزر الحالي في اللوق
 # ==========================================
 
 TOKEN = os.getenv("TOKEN", "")
@@ -23,10 +23,9 @@ TARGET_REQUESTS_PER_SECOND = 12
 CHARS = string.ascii_lowercase + string.digits + "_"
 
 def generate_random_username(length):
-    """توليد يوزر عشوائي مطابق لشروط ديسكورد (يدعم . و _)"""
+    """توليد يوزر عشوائي مطابق لشروط ديسكورد"""
     while True:
         uname = "".join(random.choices(CHARS, k=length))
-        # شروط ديسكورد الأساسية للأسماء
         if not uname.startswith(".") and not uname.endswith(".") and ".." not in uname:
             if not uname.startswith("_") and not uname.endswith("_") and "__" not in uname:
                 return uname
@@ -43,7 +42,7 @@ async def send_webhook(session, username):
         pass
 
 async def check_username(session, token, username, stats):
-    """فحص توفر اليوزر الحقيقي عبر نقطة نهاية ديسكورد المخصصة للأسماء"""
+    """فحص توفر اليوزر الحقيقي عبر نقطة نهاية ديسكورد"""
     headers = {
         "Authorization": token.strip(),
         "Content-Type": "application/json",
@@ -52,7 +51,6 @@ async def check_username(session, token, username, stats):
         "Accept-Language": "en-US,en;q=0.9",
     }
     
-    # نقطة النهاية الصحيحة للتحقق من توفر اسم المستخدم في ديسكورد
     url = f"https://discord.com/api/v10/users/@me/pomelo-attempt?username={username}"
 
     try:
@@ -61,7 +59,6 @@ async def check_username(session, token, username, stats):
             
             if resp.status == 200:
                 data = await resp.json()
-                # الـ API يرجع taken: false إذا كان اليوزر متاحاً وغير مسجل!
                 if data.get("taken") is False:
                     stats["available"] += 1
                     with open(OUTPUT_FILE, "a", encoding="utf-8") as f:
@@ -84,7 +81,7 @@ async def check_username(session, token, username, stats):
         return False
 
 async def worker(worker_id, active_tokens, queue, stats, rate_limiter):
-    """عامل فحص موزع برتم ثابت وآمن"""
+    """عامل فحص موزع يعرض اليوزر الذي يتم فحصه"""
     connector = aiohttp.TCPConnector(limit=10, force_close=True)
     async with aiohttp.ClientSession(connector=connector) as session:
         while not queue.empty():
@@ -99,7 +96,9 @@ async def worker(worker_id, active_tokens, queue, stats, rate_limiter):
             except asyncio.QueueEmpty:
                 break
 
-            # تثبيت السرعة بالثانية بدقة
+            # حفظ اليوزر الحالي في الستات عشان يظهر في الشاشة
+            stats["current_user"] = username
+
             async with rate_limiter:
                 result = await check_username(session, token, username, stats)
                 await asyncio.sleep(1.0 / TARGET_REQUESTS_PER_SECOND)
@@ -107,9 +106,8 @@ async def worker(worker_id, active_tokens, queue, stats, rate_limiter):
             if result == "DEAD":
                 if token in active_tokens:
                     active_tokens.remove(token)
-                    print(f"\n⚠️ [تحذير] استبعاد توكن تالف/محظور. المتبقي: {len(active_tokens)}")
+                    print(f"\n⚠️ [تحذير] استبعاد توكن تالف. المتبقي: {len(active_tokens)}")
             elif result is False:
-                # لو جاء لمتد بسيط، نعيد اليوزر للطابور ونهدي شوي
                 await queue.put(username)
                 await asyncio.sleep(1.0)
 
@@ -121,7 +119,7 @@ async def main():
         return
 
     tokens_list = [t.strip() for t in TOKEN.split(",") if t.strip()]
-    print(f"🚀 بدء فحص اليوزرات الحقيقي برتم ثابت ({TARGET_REQUESTS_PER_SECOND} طلب/ث). التوكنات: {len(tokens_list)}")
+    print(f"🚀 بدء الفحص مع عرض اليوزرات الحالية (السرعة: {TARGET_REQUESTS_PER_SECOND} طلب/ث). التوكنات: {len(tokens_list)}")
 
     rate_limiter = asyncio.Semaphore(TARGET_REQUESTS_PER_SECOND)
     batch_number = 1
@@ -149,7 +147,8 @@ async def main():
             "available": 0,
             "ratelimited": 0,
             "errors": 0,
-            "dead_tokens": 0
+            "dead_tokens": 0,
+            "current_user": "---"
         }
 
         start_time = time.time()
@@ -160,8 +159,9 @@ async def main():
         while not usernames_queue.empty() and current_active_tokens:
             elapsed = time.time() - start_time
             speed = stats["checked"] / elapsed if elapsed > 0 else 0
-            print(f"\r📊 [دفعة #{batch_number} | فحص: {stats['checked']}/{BATCH_SIZE}] | 🟢 [متاح: {stats['available']}] | ⏳ [السرعة: {speed:.1f} يوزر/ث] | ⚠️ [429: {stats['ratelimited']}]", end="")
-            await asyncio.sleep(0.4)
+            # طباعة العداد مع اسم اليوزر الحالي يتحرك قدامك
+            print(f"\r🔍 [فحص: {stats['checked']}/{BATCH_SIZE}] | 👤 [اليوزر: {stats['current_user']:<6}] | 🟢 [متاح: {stats['available']}] | ⏳ [{speed:.1f} يوزر/ث] | ⚠️ [429: {stats['ratelimited']}]", end="")
+            await asyncio.sleep(0.3)
 
         await asyncio.gather(*tasks, return_exceptions=True)
         
