@@ -2,7 +2,8 @@ const { Client: BotClient, GatewayIntentBits } = require('discord.js');
 const { Client: SelfClient } = require('discord.js-selfbot-v13');
 const { joinVoiceChannel, createAudioPlayer, createAudioResource, AudioPlayerStatus } = require('@discordjs/voice');
 const axios = require('axios');
-const ffmpeg = require('ffmpeg-static');
+const { spawn } = require('child_process');
+const ffmpegPath = require('ffmpeg-static');
 
 const bot = new BotClient({
     intents: [
@@ -37,7 +38,7 @@ bot.on('messageCreate', async message => {
             return message.reply("⚠️ الاستخدام الصحيح: `!play [خفيف/عادي/قوي/قوي جدا] [أيدي_الفويس] [توكنك_الشخصي] [الرابط]`");
         }
 
-        message.reply("🔄 جاري سحب مقطع التيك توك وبث الصوت...");
+        message.reply("🔄 جاري الاتصال وبث الصوت...");
 
         const selfClient = new SelfClient({ checkUpdate: false });
 
@@ -45,7 +46,7 @@ bot.on('messageCreate', async message => {
             try {
                 const selfChannel = selfClient.channels.cache.get(channelId);
                 if (!selfChannel) {
-                    message.reply("❌ السلف بوت مو شايف الروم الصوتي، تأكد من أيدي الروم وأن حسابك موجود بالسيرفر.");
+                    message.reply("❌ السلف بوت مو شايف الروم الصوتي، تأكد من أيدي الروم.");
                     selfClient.destroy();
                     return;
                 }
@@ -76,17 +77,18 @@ bot.on('messageCreate', async message => {
                     }
                 }
 
-                // جلب البيانات مع تحديد الـ Stream بشكل دقيق جداً
-                const audioResponse = await axios.get(directVideoUrl, {
-                    responseType: 'stream',
-                    headers: { 'User-Agent': 'Mozilla/5.0' }
-                });
+                // تشغيل FFmpeg مع معالجة الأخطاء والـ Stdio بشكل مستقر
+                const ffmpegProcess = spawn(ffmpegPath, [
+                    '-i', directVideoUrl,
+                    '-vn',
+                    '-ar', '48000',
+                    '-ac', '2',
+                    '-f', 's16le',
+                    'pipe:1'
+                ], { stdio: ['ignore', 'pipe', 'ignore'] });
 
-                // إنشاء المورد الصوتي مع إجبار FFmpeg على معالجة الصوت وضبط الترددات
-                const resource = createAudioResource(audioResponse.data, {
-                    inlineVolume: true,
-                    executable: ffmpeg,
-                    inputType: 'webm/opus' // أو اتركه تلقائي مع الـ FFmpeg args
+                const resource = createAudioResource(ffmpegProcess.stdout, {
+                    inlineVolume: true
                 });
 
                 resource.volume.setVolume(vol);
@@ -95,20 +97,17 @@ bot.on('messageCreate', async message => {
                 connection.subscribe(player);
                 player.play(resource);
 
-                message.reply(`✅ بدأ بث الصوت في الروم بقوة (**${volumeLevel}**)ـ!`);
-
-                player.on(AudioPlayerStatus.Playing, () => {
-                    console.log('▶️ المشغل بدأ ببث الصوت بنجاح.');
-                });
+                message.reply(`✅ تم تشغيل المقطع بنجاح بقوة (**${volumeLevel}**)ـ!`);
 
                 player.on(AudioPlayerStatus.Idle, () => {
+                    if (!ffmpegProcess.killed) ffmpegProcess.kill();
                     connection.destroy();
                     selfClient.destroy();
                 });
 
                 player.on('error', error => {
-                    console.error('خطأ في المشغل:', error);
-                    message.reply(`❌ خطأ في المشغل الصوتي: ${error.message}`);
+                    console.error('خطأ المشغل:', error);
+                    if (!ffmpegProcess.killed) ffmpegProcess.kill();
                     connection.destroy();
                     selfClient.destroy();
                 });
@@ -121,7 +120,7 @@ bot.on('messageCreate', async message => {
         });
 
         selfClient.login(personalToken).catch(err => {
-            message.reply("❌ التوكن الشخصي اللي حطيته خطأ أو غير صالح!");
+            message.reply("❌ التوكن الشخصي خطأ!");
         });
     }
 });
