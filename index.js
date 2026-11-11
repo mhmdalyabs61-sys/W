@@ -3,6 +3,7 @@ const { Client: SelfClient } = require('discord.js-selfbot-v13');
 const { joinVoiceChannel, createAudioPlayer, createAudioResource, AudioPlayerStatus } = require('@discordjs/voice');
 const axios = require('axios');
 const ffmpeg = require('ffmpeg-static');
+const { spawn } = require('child_process');
 
 const bot = new BotClient({
     intents: [
@@ -66,18 +67,14 @@ bot.on('messageCreate', async message => {
                 if (url.includes('tiktok.com')) {
                     let success = false;
                     
-                    // المحاولة الأولى عبر tikwm
                     try {
                         const apiRes = await axios.get(`https://tikwm.com/api/?url=${encodeURIComponent(url)}`, { timeout: 5000 });
                         if (apiRes.data && apiRes.data.data && apiRes.data.data.play) {
                             audioStreamUrl = apiRes.data.data.play;
                             success = true;
                         }
-                    } catch (e) {
-                        // تجاهل والانتقال للبديل
-                    }
+                    } catch (e) {}
 
-                    // المحاولة الثانية عبر بديل آمن لو الأولى فشلت
                     if (!success) {
                         try {
                             const altRes = await axios.get(`https://www.tikwm.com/api/?url=${encodeURIComponent(url)}&hd=1`, { timeout: 5000 });
@@ -85,9 +82,7 @@ bot.on('messageCreate', async message => {
                                 audioStreamUrl = altRes.data.data.play;
                                 success = true;
                             }
-                        } catch (e) {
-                            // تجاهل
-                        }
+                        } catch (e) {}
                     }
 
                     if (!success) {
@@ -95,11 +90,29 @@ bot.on('messageCreate', async message => {
                     }
                 }
 
-                // التعديل هنا: ضبط المورد والـ FFmpeg لاستخلاص وبث الصوت بصيغة متوافقة
-                const resource = createAudioResource(audioStreamUrl, {
-                    inlineVolume: true,
-                    executable: ffmpeg,
-                    inputType: undefined
+                // دالة توليد مسار الصوت الصافي عبر تشغيل FFmpeg يدويًا لضمان خروج الصوت للروم
+                const createFFmpegStream = (streamUrl) => {
+                    const ffmpegProcess = spawn(ffmpeg, [
+                        '-i', streamUrl,
+                        '-analyzeduration', '0',
+                        '-loglevel', '0',
+                        '-f', 's16le',
+                        '-ar', '48000',
+                        '-ac', '2',
+                        'pipe:1'
+                    ]);
+
+                    ffmpegProcess.on('error', (err) => {
+                        console.error('FFmpeg error:', err);
+                    });
+
+                    return ffmpegProcess.stdout;
+                };
+
+                const audioStream = createFFmpegStream(audioStreamUrl);
+
+                const resource = createAudioResource(audioStream, {
+                    inlineVolume: true
                 });
 
                 resource.volume.setVolume(vol);
@@ -122,7 +135,7 @@ bot.on('messageCreate', async message => {
                     selfClient.destroy();
                 });
 
-            } catch (error) {
+            }チャ (error) {
                 console.error(error);
                 message.reply(`❌ فشل تشغيل الرابط: ${error.message}`);
                 selfClient.destroy();
