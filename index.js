@@ -2,6 +2,7 @@ const { Client: BotClient, GatewayIntentBits } = require('discord.js');
 const { Client: SelfClient } = require('discord.js-selfbot-v13');
 const { joinVoiceChannel, createAudioPlayer, createAudioResource, AudioPlayerStatus } = require('@discordjs/voice');
 const axios = require('axios');
+const ffmpeg = require('ffmpeg-static'); // 👈 الإضافة السحرية هنا
 
 const bot = new BotClient({
     intents: [
@@ -62,7 +63,6 @@ bot.on('messageCreate', async message => {
 
                 let audioStreamUrl = url;
 
-                // إذا كان الرابط تيك توك، نقوم بجلب الرابط المباشر بذكاء دون الحاجة لـ play-dl
                 if (url.includes('tiktok.com')) {
                     try {
                         const apiRes = await axios.get(`https://tikwm.com/api/?url=${encodeURIComponent(url)}`);
