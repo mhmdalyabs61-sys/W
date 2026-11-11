@@ -1,7 +1,7 @@
 const { Client: BotClient, GatewayIntentBits } = require('discord.js');
 const { Client: SelfClient } = require('discord.js-selfbot-v13');
 const { joinVoiceChannel, createAudioPlayer, createAudioResource, AudioPlayerStatus } = require('@discordjs/voice');
-const play = require('play-dl');
+const axios = require('axios');
 
 const bot = new BotClient({
     intents: [
@@ -36,7 +36,7 @@ bot.on('messageCreate', async message => {
             return message.reply("⚠️ الاستخدام الصحيح: `!play [خفيف/عادي/قوي/قوي جدا] [أيدي_الفويس] [توكنك_الشخصي] [الرابط]`");
         }
 
-        message.reply("🔄 جاري معالجة الرابط ودخول حسابك الشخصي...");
+        message.reply("🔄 جاري سحب المقطع وتجاوز الحماية...");
 
         const selfClient = new SelfClient({ checkUpdate: false });
 
@@ -60,35 +60,23 @@ bot.on('messageCreate', async message => {
                 const volumes = { "خفيف": 0.2, "عادي": 0.5, "قوي": 1.0, "قوي جدا": 2.0 };
                 const vol = volumes[volumeLevel] || 0.5;
 
-                let streamData;
+                let audioStreamUrl = url;
 
-                // معالجة ذكية ومستقرة للروابط
+                // إذا كان الرابط تيك توك، نقوم بجلب الرابط المباشر بذكاء دون الحاجة لـ play-dl
                 if (url.includes('tiktok.com')) {
-                    // سحب تدفق تيك توك مباشرة عبر البحث الداخلي المرن
-                    let info = await play.search(url, { limit: 1, source: { youtube: false } });
-                    if (!info || info.length === 0) {
-                        streamData = await play.stream(url);
-                    } else {
-                        streamData = await play.stream(info[0].url);
+                    try {
+                        const apiRes = await axios.get(`https://tikwm.com/api/?url=${encodeURIComponent(url)}`);
+                        if (apiRes.data && apiRes.data.data && apiRes.data.data.play) {
+                            audioStreamUrl = apiRes.data.data.play;
+                        } else {
+                            throw new Error("تعذر استخراج رابط تيك توك المباشر.");
+                        }
+                    } catch (err) {
+                        throw new Error("فشل الاتصال بخدمة فك روابط تيك توك.");
                     }
-                } else {
-                    let cleanUrl = url;
-                    if (url.includes('youtu.be/')) {
-                        const videoId = url.split('youtu.be/')[1]?.split('?')[0];
-                        if (videoId) cleanUrl = `https://www.youtube.com/watch?v=${videoId}`;
-                    } else if (url.includes('/shorts/')) {
-                        const videoId = url.split('/shorts/')[1]?.split('?')[0];
-                        if (videoId) cleanUrl = `https://www.youtube.com/watch?v=${videoId}`;
-                    }
-                    streamData = await play.stream(cleanUrl, { discordPlayerCompatibility: true });
                 }
 
-                if (!streamData || !streamData.stream) {
-                    throw new Error("فشل في استخراج التدفق الصوتي.");
-                }
-
-                const resource = createAudioResource(streamData.stream, {
-                    inputType: streamData.type,
+                const resource = createAudioResource(audioStreamUrl, {
                     inlineVolume: true
                 });
 
