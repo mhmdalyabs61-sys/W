@@ -61,13 +61,15 @@ bot.on('messageCreate', async message => {
                 const vol = volumes[volumeLevel] || 0.5;
 
                 let streamData;
+
                 if (url.includes('tiktok.com')) {
-                    let searchInfo = await play.search(url, { limit: 1, source: { youtube: false } });
-                    if (!searchInfo || searchInfo.length === 0) {
-                        streamData = await play.stream(url);
-                    } else {
-                        streamData = await play.stream(searchInfo[0].url);
+                    // استخدام محرك البحث الذكي بدون الدخول في مسار play-dl المكسور لتيك توك
+                    const searchResults = await play.search(url, { limit: 1, source: { youtube: false } });
+                    if (!searchResults || searchResults.length === 0) {
+                        throw new Error("تعذر جلب بيانات مقطع تيك توك عبر محرك البحث.");
                     }
+                    // سحب التدفق المباشر للنتيجة الأولى
+                    streamData = await play.stream(searchResults[0].url);
                 } else {
                     let cleanUrl = url;
                     if (url.includes('youtu.be/')) {
