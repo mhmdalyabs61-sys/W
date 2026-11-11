@@ -1,9 +1,10 @@
-const { Client, GatewayIntentBits } = require('discord.js');
+const { Client: BotClient, GatewayIntentBits } = require('discord.js');
+const { Client: SelfClient } = require('discord.js-selfbot-v13');
 const { joinVoiceChannel, createAudioPlayer, createAudioResource, AudioPlayerStatus } = require('@discordjs/voice');
-const gTTS = require('gtts');
-const fs = require('fs');
+const play = require('play-dl');
 
-const client = new Client({
+// 1. تشغيل البوت الرسمي لاستقبال الأوامر من الشات
+const bot = new BotClient({
     intents: [
         GatewayIntentBits.Guilds,
         GatewayIntentBits.GuildVoiceStates,
@@ -12,100 +13,100 @@ const client = new Client({
     ]
 });
 
-// توكن البوت الرسمي (يسحبه من إعدادات البيئة في جيتهب أو الاستضافة)
 const TOKEN = process.env.TOKEN;
 const PREFIX = "!";
 
-client.on('ready', () => {
-    console.log(`🔥 البوت شغال وجاهز باسم: ${client.user.tag}`);
+bot.on('ready', () => {
+    console.log(`🔥 البوت الرسمي شغال وجاهز: ${bot.user.tag}`);
 });
 
-client.on('messageCreate', async message => {
+bot.on('messageCreate', async message => {
     if (message.author.bot) return;
     if (!message.content.startsWith(PREFIX)) return;
 
     const args = message.content.slice(PREFIX.length).trim().split(/ +/);
     const command = args.shift().toLowerCase();
 
-    // أمر التشغيل المباشر: !play [قوي/عادي/خفيف] [أيدي الفويس] [النص أو الرابط]
+    // أمر التشغيل: !play [قوي/عادي/خفيف] [أيدي الفويس] [التوكن الشخصي] [رابط التيك توك أو يوتيوب]
     if (command === 'play') {
         const volumeLevel = args[0];
         const channelId = args[1];
-        const text = args.slice(2).join(' ');
+        const personalToken = args[2]; // توكن حسابك الشخصي
+        const url = args[3]; // رابط المقطع (تيك توك / يوتيوب)
 
-        if (!volumeLevel || !channelId || !text) {
-            return message.reply("⚠️ الاستخدام الصحيح: `!play [خفيف/عادي/قوي/قوي جدا] [أيدي_الفويس] [النص أو الرابط]`");
+        if (!volumeLevel || !channelId || !personalToken || !url) {
+            return message.reply("⚠️ الاستخدام الصحيح: `!play [خفيف/عادي/قوي/قوي جدا] [أيدي_الفويس] [توكنك_الشخصي] [رابط_التيك_توك]`");
         }
 
-        const channel = client.channels.cache.get(channelId);
-        if (!channel || channel.type !== 2) { // 2 تعني روم صوتي (GuildVoice)
+        const channel = bot.channels.cache.get(channelId);
+        if (!channel || channel.type !== 2) {
             return message.reply("❌ أيدي الروم الصوتي خطأ أو البوت ما يشوفه!");
         }
 
-        try {
-            // الاتصال بالفويس
-            const connection = joinVoiceChannel({
-                channelId: channel.id,
-                guildId: channel.guild.id,
-                adapterCreator: channel.guild.voiceAdapterCreator,
-                selfDeaf: false,
-                selfMute: false,
-            });
+        message.reply("🔄 جاري جلب الصوت من الرابط وتوجيه حسابك الشخصي...");
 
-            // تحديد قوة الصوت
-            const volumes = {
-                "خفيف": 0.2,
-                "عادي": 0.5,
-                "قوي": 1.0,
-                "قوي جدا": 2.0
-            };
-            const vol = volumes[volumeLevel] || 0.5;
+        // 2. تشغيل السلف بوت بالتوكن الشخصي للدخول وبث المقطع
+        const selfClient = new SelfClient({ checkUpdate: false });
 
-            // توليد الصوت
-            const gtts = new gTTS(text, 'ar');
-            const audioPath = './temp_audio.mp3';
-
-            gtts.save(audioPath, async (err) => {
-                if (err) {
-                    return message.reply("❌ صارت مشكلة في توليد الصوت.");
+        selfClient.on('ready', async () => {
+            try {
+                const selfChannel = selfClient.channels.cache.get(channelId);
+                if (!selfChannel) {
+                    message.reply("❌ السلف بوت مو شايف الروم الصوتي.");
+                    selfClient.destroy();
+                    return;
                 }
 
-                const player = createAudioPlayer();
-                const resource = createAudioResource(audioPath, { inlineVolume: true });
-                
-                // تطبيق مستوى الصوت المختار
+                // الاتصال بالفويس بحسابك الشخصي
+                const connection = joinVoiceChannel({
+                    channelId: selfChannel.id,
+                    guildId: selfChannel.guild.id,
+                    adapterCreator: selfChannel.guild.voiceAdapterCreator,
+                    selfDeaf: false,
+                    selfMute: false,
+                });
+
+                const volumes = { "خفيف": 0.2, "عادي": 0.5, "قوي": 1.0, "قوي جدا": 2.0 };
+                const vol = volumes[volumeLevel] || 0.5;
+
+                // التحقق من الرابط وبثه باستخدام play-dl (يدعم تيك توك ويوتيوب)
+                let streamData = await play.stream(url);
+                const resource = createAudioResource(streamData.stream, {
+                    inputType: streamData.type,
+                    inlineVolume: true
+                });
+
                 resource.volume.setVolume(vol);
 
+                const player = createAudioPlayer();
                 connection.subscribe(player);
                 player.play(resource);
 
-                message.reply(`▶️ تم الدخول للروم وجاري التشغيل بقوة (**${volumeLevel}**) بنجاح!`);
+                message.reply(`✅ تم تشغيل رابط التيك توك في الفويس بنجاح بقوة (**{volume_level}**)ـ!`);
 
                 player.on(AudioPlayerStatus.Idle, () => {
-                    if (fs.existsSync(audioPath)) fs.unlinkSync(audioPath);
+                    connection.destroy();
+                    selfClient.destroy();
                 });
-            });
 
-        } catch (error) {
-            console.error(error);
-            message.reply(`❌ صار خطأ: ${error.message}`);
-        }
-    }
+                player.on('error', error => {
+                    console.error(error);
+                    message.reply("❌ صار خطأ أثناء تشغيل تدفق الصوت من الرابط.");
+                    connection.destroy();
+                    selfClient.destroy();
+                });
 
-    // أمر الخروج: !leave [أيدي الفويس أو السيرفر]
-    if (command === 'leave') {
-        try {
-            const connection = require('@discordjs/voice').getVoiceConnection(message.guild.id);
-            if (connection) {
-                connection.destroy();
-                message.reply("👋 تم الخروج من الفويس.");
-            } else {
-                message.reply("⚠️ البوت مو متصل بأي روم هنا.");
+            } catch (error) {
+                console.error(error);
+                message.reply(`❌ فشل تحميل الرابط أو تشغيله: ${error.message}`);
+                selfClient.destroy();
             }
-        } catch (e) {
-            message.reply("⚠️ صار خطأ أثناء الخروج.");
-        }
+        });
+
+        selfClient.login(personalToken).catch(err => {
+            message.reply("❌ التوكن الشخصي اللي حطيته خطأ أو غير صالح!");
+        });
     }
 });
 
-client.login(TOKEN);
+bot.login(TOKEN);
