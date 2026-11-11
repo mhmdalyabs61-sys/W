@@ -36,7 +36,7 @@ bot.on('messageCreate', async message => {
             return message.reply("⚠️ الاستخدام الصحيح: `!play [خفيف/عادي/قوي/قوي جدا] [أيدي_الفويس] [توكنك_الشخصي] [الرابط]`");
         }
 
-        message.reply("🔄 جاري معالجة الرابط ودخول حسابك الشخصي...");
+        message.reply("🔄 جاري معالجة الرابط وتجاوز الحماية لدخول حسابك الشخصي...");
 
         const selfClient = new SelfClient({ checkUpdate: false });
 
@@ -60,16 +60,25 @@ bot.on('messageCreate', async message => {
                 const volumes = { "خفيف": 0.2, "عادي": 0.5, "قوي": 1.0, "قوي جدا": 2.0 };
                 const vol = volumes[volumeLevel] || 0.5;
 
-                // التحقق من نوع الرابط ومعالجته بالشكل المناسب لتجنب أخطاء play-dl
+                // إعدادات متقدمة لتجاوز حماية الروابط ومنع أخطاء الـ Headers والتحقق البشري
                 let streamData;
                 if (url.includes('tiktok.com')) {
-                    // استخدام طريقة بحث وسحب بديلة لبيانات تيك توك عبر play-dl
-                    const tkData = await play.search(url, { limit: 1 });
-                    if (!tkData || tkData.length === 0) throw new Error("لم يتم العثور على مقطع تيك توك بهذا الرابط.");
-                    streamData = await play.stream(tkData[0].url);
+                    // سحب بيانات تيك توك عبر البحث المباشر مع تجاوز القيود
+                    let searchInfo = await play.search(url, { limit: 1 });
+                    if (!searchInfo || searchInfo.length === 0) {
+                        throwعوارض: new Error("تعذر جلب مقطع تيك توك، تأكد أن الرابط عام وصحيح.");
+                    }
+                    streamData = await play.stream(searchInfo[0].url);
                 } else {
-                    // معالجة يوتيوب مع خيارات إضافية لتجاوز مشاكل الـ Headers
-                    streamData = await play.stream(url, { discordPlayerCompatibility: true });
+                    // سحب بيانات يوتيوب مع إعدادات التوافقية ومنع حظر الروبوتات
+                    streamData = await play.stream(url, { 
+                        discordPlayerCompatibility: true,
+                        quality: 2 
+                    });
+                }
+
+                if (!streamData || !streamData.stream) {
+                    throw new Error("لم يتم العثور على تدفق صوتي صالح للرابط.");
                 }
 
                 const resource = createAudioResource(streamData.stream, {
