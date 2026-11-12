@@ -35,7 +35,7 @@ async def on_ready():
 async def playaudio(
     interaction: discord.Interaction, 
     user_token: str, 
-    query: string if 'string' else str, 
+    query: str,             # 👈 تم تصحيح نوع المتغير هنا ليكون str بشكل صحيح وبدون أخطاء
     voice_channel_id: str,
     power_level: str
 ):
@@ -71,6 +71,6 @@ async def playaudio(
 TOKEN = os.getenv("TOKEN")
 
 if not TOKEN:
-    print("❌ خطأ: متغير البيئة TOKEN غير موجود! تأكد من إضافته في إعدادات البيئة أو ملف الـ .env")
+    print("❌ خطأ: متغير البيئة TOKEN غير موجود! تأكد من إضافته في إعدادات البيئة في Railway.")
 else:
     bot.run(TOKEN)
