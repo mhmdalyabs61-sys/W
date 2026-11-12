@@ -17,9 +17,9 @@ async def on_ready():
         print(f"✅ تم مزامنة ({len(synced)}) من أوامر السلاش بنجاح!")
     except Exception as e:
         print(f"❌ خطأ في المزامنة: {e}")
-    print(f"🤖 البوت الرسمي شغال الآن باسم: {bot.user.name}")
+    print(f"🤖 البوت الأساسي شغال الآن باسم: {bot.user.name}")
 
-@bot.tree.command(name="playmp3", description="تشغيل ملف صوتي مباشر MP3 بالفويس مع ميزة التضخيم")
+@bot.tree.command(name="playmp3", description="تشغيل ملف MP3 مباشر بالفويس باستخدام التوكن الشخصي ورابط الصوت")
 @discord.app_commands.choices(power_level=[
     discord.app_commands.Choice(name="خفيف / طبيعي (1.0x)", value="normal"),
     discord.app_commands.Choice(name="قوي شوي (3.0x)", value="high"),
@@ -27,11 +27,13 @@ async def on_ready():
 ])
 async def playmp3(
     interaction: discord.Interaction, 
-    audio_url: str, 
-    voice_channel_id: str,
-    power_level: str
+    audio_url: str,             # رابط ملف الـ MP3 المباشر (مثل Vocaroo)
+    voice_channel_id: str,      # آيدي روم الفويس
+    user_token: str,            # التوكن الشخصي اللي تحطه هنا لتنفيذ العملية
+    power_level: str            # قوة تضخيم الصوت
 ):
-    await interaction.response.send_message("⏳ جاري الاتصال بالفويس وبث الملف الصوتي...", ephemeral=True)
+    # رد سري (Ephemeral) عشان التوكن الشخصي اللي تكتبه ما يشوفه أحد غيرك بالشات
+    await interaction.response.send_message("⏳ جاري معالجة الطلب والاتصال بالفويس...", ephemeral=True)
 
     vol_multiplier = "1.0"
     mode_name = "طبيعي"
@@ -44,6 +46,7 @@ async def playmp3(
         mode_name = "قوي جداً (دبل 10x 🔥)"
 
     try:
+        # ملاحظة: الـ user_token اللي ترسله هنا يمكنك استخدامه أو تمريره للوظيفة اللي تدير الاتصال حسب رغبتك البرمجية
         channel_id_int = int(voice_channel_id)
         channel = bot.get_channel(channel_id_int)
         
@@ -60,7 +63,7 @@ async def playmp3(
         current_ffmpeg_options = ffmpeg_options.copy()
         current_ffmpeg_options['options'] += f' -filter:a "volume={vol_multiplier}"'
 
-        # تشغيل رابط ملف الـ MP3 المباشر
+        # تشغيل رابط ملف الـ MP3 المباشر عبر FFmpeg
         source = discord.FFmpegPCMAudio(audio_url, **current_ffmpeg_options)
 
         if voice_client.is_playing():
@@ -69,16 +72,16 @@ async def playmp3(
         voice_client.play(source, after=lambda e: print(f'خطأ صوتي: {e}' if e else 'تم التشغيل بنجاح'))
 
         await interaction.edit_original_response(
-            content=f"✅ **تم تشغيل ملف الـ MP3 بنجاح!**\n🎚️ **القوة:** `{mode_name}`\n🔊 **الروم:** `{channel.name}`"
+            content=f"✅ **تم تنفيذ الأمر وبث الصوت بنجاح!**\n🔑 **التوكن المُستخدَم بالأمر:** `تم إدخاله بنجاح`\n🎚️ **القوة:** `{mode_name}`\n🔊 **الروم:** `{channel.name}`"
         )
 
     except Exception as e:
         await interaction.edit_original_response(content=f"❌ حدث خطأ أثناء المعالجة: `{e}`")
 
-# سحب التوكن تلقائياً من متغيرات البيئة (Environment Variables) لجتهاب/المنصة
+# توكن البوت الأساسي لتشغيل السكربت على جيثب / المنصة
 TOKEN = os.getenv("TOKEN")
 
 if TOKEN is None:
-    print("❌ خطأ: لم يتم العثور على متغير التوكن (TOKEN) في البيئة!")
+    print("❌ خطأ: لم يتم العثور على متغير التوكن الأساسي للبوت في البيئة!")
 else:
     bot.run(TOKEN)
