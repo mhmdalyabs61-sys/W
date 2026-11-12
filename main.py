@@ -17,15 +17,15 @@ async def on_ready():
         print(f"✅ تم مزامنة ({len(synced)}) من أوامر السلاش بنجاح!")
     except Exception as e:
         print(f"❌ خطأ في المزامنة: {e}")
-    print(f"🤖 البوت شغال باسم: {bot.user.name}")
+    print(f"🤖 البوت الرسمي شغال الآن باسم: {bot.user.name}")
 
-@bot.tree.command(name="playaudio", description="تشغيل ملف صوتي مباشر MP3 بالفويس مع ميزة التضخيم")
+@bot.tree.command(name="playmp3", description="تشغيل ملف صوتي مباشر MP3 بالفويس مع ميزة التضخيم")
 @discord.app_commands.choices(power_level=[
     discord.app_commands.Choice(name="خفيف / طبيعي (1.0x)", value="normal"),
     discord.app_commands.Choice(name="قوي شوي (3.0x)", value="high"),
     discord.app_commands.Choice(name="قوي جداً - دبل 10 مرات 🔥 (10.0x)", value="extreme")
 ])
-async def playaudio(
+async def playmp3(
     interaction: discord.Interaction, 
     audio_url: str, 
     voice_channel_id: str,
@@ -60,7 +60,7 @@ async def playaudio(
         current_ffmpeg_options = ffmpeg_options.copy()
         current_ffmpeg_options['options'] += f' -filter:a "volume={vol_multiplier}"'
 
-        # تشغيل الرابط الصوتي المباشر لملف الـ MP3 مباشرة
+        # تشغيل رابط ملف الـ MP3 المباشر
         source = discord.FFmpegPCMAudio(audio_url, **current_ffmpeg_options)
 
         if voice_client.is_playing():
@@ -69,12 +69,16 @@ async def playaudio(
         voice_client.play(source, after=lambda e: print(f'خطأ صوتي: {e}' if e else 'تم التشغيل بنجاح'))
 
         await interaction.edit_original_response(
-            content=f"✅ **تم تشغيل الملف الصوتي بنجاح!**\n🎚️ **القوة:** `{mode_name}`\n🔊 **الروم:** `{channel.name}`"
+            content=f"✅ **تم تشغيل ملف الـ MP3 بنجاح!**\n🎚️ **القوة:** `{mode_name}`\n🔊 **الروم:** `{channel.name}`"
         )
 
     except Exception as e:
         await interaction.edit_original_response(content=f"❌ حدث خطأ أثناء المعالجة: `{e}`")
 
+# سحب التوكن تلقائياً من متغيرات البيئة (Environment Variables) لجتهاب/المنصة
 TOKEN = os.getenv("TOKEN")
-if TOKEN:
+
+if TOKEN is None:
+    print("❌ خطأ: لم يتم العثور على متغير التوكن (TOKEN) في البيئة!")
+else:
     bot.run(TOKEN)
