@@ -7,14 +7,13 @@ import google.generativeai as genai
 TOKEN = os.getenv("DISCORD_TOKEN")
 GEMINI_API_KEY = os.getenv("GEMINI_API_KEY")
 
-# التحقق من وجود المفاتيح
 if not TOKEN or not GEMINI_API_KEY:
     raise ValueError("⚠️ تأكد من إضافة DISCORD_TOKEN و GEMINI_API_KEY في متغيرات البيئة!")
 
 # 2. إعدادات جيمناي
 genai.configure(api_key=GEMINI_API_KEY)
 
-# التعليمات الأساسية للببوت (System Prompt) المحدثة مع السورسات والأسعار
+# التعليمات الأساسية للبوت (System Prompt) مع السورسات والأسعار
 SYSTEM_INSTRUCTION = (
     "أنت مساعد ذكي وممثل رسمي لفريق متجر دسكورد. أسلوبك عفوي، وفيّ، وبدون سماجة.\n\n"
     "قواعدك الصارمة:\n"
@@ -65,17 +64,47 @@ intents.message_content = True
 
 bot = commands.Bot(command_prefix="!", intents=intents)
 
+# متغير لحفظ آي دي الروم المخصص (يبدأ فاضي)
+ALLOWED_CHANNEL_ID = None
+
 @bot.event
 async def on_ready():
+    try:
+        await bot.tree.sync()
+        print(f"✅ تم مزامنة أوامر السلاش بنجاح.")
+    except Exception as e:
+        print(f"خطأ في مزامنة الأوامر: {e}")
     print(f"✅ تم تسجيل الدخول بنجاح باسم: {bot.user.name}")
+
+# أمر سلاش لتحديد الروم المخصص
+@bot.tree.command(name="setchannel", description="تحديد الروم الذي سيجيب فيه البوت تلقائياً بدون منشن")
+@app_commands.default_permissions(administrator=True)
+async def setchannel(interaction: discord.Interaction, channel: discord.TextChannel):
+    global ALLOWED_CHANNEL_ID
+    ALLOWED_CHANNEL_ID = channel.id
+    await interaction.response.send_message(f"✅ تم تحديد روم الدعم الفني/الردود تلقائياً: {channel.mention}", ephemeral=True)
 
 @bot.event
 async def on_message(message):
     if message.author == bot.user:
         return
 
-    # الرد عند منشن البوت أو في الرسائل الخاصة
-    if bot.user.mentioned_in(message) or isinstance(message.channel, discord.DMChannel):
+    # منع البوت من الرد إذا كانت الرسالة تحتوي على everyone أو here
+    if "@everyone" in message.content or "@here" in message.content:
+        return
+
+    should_respond = False
+
+    # الحالة الأولى: إذا كان الروم الحالي هو الروم المحدد بالسلاش (يرد بدون منشن ولا رد)
+    if ALLOWED_CHANNEL_ID and message.channel.id == ALLOWED_CHANNEL_ID:
+        should_respond = True
+
+    # الحالة الثانية: إذا تم منشن البوت أو كانت الرسالة في الخاص (DM)
+    elif bot.user.mentioned_in(message) or isinstance(message.channel, discord.DMChannel):
+        should_respond = True
+
+    if should_respond:
+        # تنظيف المنشن لو وُجد
         clean_content = message.content.replace(f"<@{bot.user.id}>", "").strip()
         
         if not clean_content:
@@ -89,8 +118,6 @@ async def on_message(message):
             except Exception as e:
                 print(f"خطأ أثناء توليد الرد: {e}")
                 await message.reply("صار فيه خطأ بسيط، جرب مرة ثانية بعد شوي.")
-
-    await bot.parse_command(message)
 
 # تشغيل البوت
 bot.run(TOKEN)
