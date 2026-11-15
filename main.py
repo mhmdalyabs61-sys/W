@@ -53,9 +53,9 @@ generation_config = {
     "temperature": 0.7,
 }
 
-# استخدمنا اسم الموديل بالطريقة القياسية المتوافقة مع المكتبة
+# التعريف الصحيح المعتمد بالمكتبة القديمة
 model = genai.GenerativeModel(
-    model_name="gemini-flash",
+    model_name="models/gemini-1.5-flash",
     generation_config=generation_config,
     system_instruction=SYSTEM_INSTRUCTION
 )
