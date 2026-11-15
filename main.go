@@ -20,7 +20,7 @@ func main() {
 	flag.Parse()
 
 	if *TOKEN == "" {
-		log.Fatalf("Error: Main Bot Token is missing. Set DISCORD_TOKEN environment variable.")
+		log.Fatalf("Error: DISCORD_TOKEN is not set in environment variables.")
 	}
 
 	sess, err := discordgo.New("Bot " + *TOKEN)
@@ -73,7 +73,7 @@ func main() {
 			s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
 				Type: discordgo.InteractionResponseChannelMessageWithSource,
 				Data: &discordgo.InteractionResponseData{
-					Content: "جاري الإرسال بمعالجة ذكية للـ Rate Limits...",
+					Content: "جاري التنفيذ...",
 					Flags:   discordgo.MessageFlagsEphemeral,
 				},
 			})
@@ -87,22 +87,16 @@ func main() {
 								RetryAfter float64 `json:"retry_after"`
 							}
 							if json.Unmarshal(restErr.ResponseBody, &ratelimit) == nil {
-								log.Printf("Hit Rate Limit! Waiting for %.2f seconds...", ratelimit.RetryAfter)
 								time.Sleep(time.Duration(ratelimit.RetryAfter * float64(time.Second)))
-								
 								_, err = s.ChannelMessageSend(channelID, msg)
 								if err != nil {
-									log.Printf("Failed after retry: %v", err)
 									break
 								}
 								continue
 							}
 						}
-						
-						log.Printf("Failed to send message: %v", err)
 						break
 					}
-					
 					time.Sleep(50 * time.Millisecond)
 				}
 			}()
@@ -110,8 +104,11 @@ func main() {
 	})
 
 	sess.AddHandler(func(s *discordgo.Session, r *discordgo.Ready) {
-		log.Printf("Main Bot logged in as: %v", s.State.User.Username)
+		log.Printf("Bot logged in as: %v", s.State.User.Username)
 	})
+
+	// تفعيل جميع النوايا عشان يقرأ ويرسل بالخاص والسيرفرات بدون مشاكل
+	sess.Identify.Intents = discordgo.IntentsAllWithoutPrivileged | discordgo.IntentGuilds | discordgo.IntentDirectMessages | discordgo.IntentGuildMessages
 
 	err = sess.Open()
 	if err != nil {
@@ -128,5 +125,4 @@ func main() {
 	sc := make(chan os.Signal, 1)
 	signal.Notify(sc, syscall.SIGINT, syscall.SIGTERM, os.Interrupt)
 	<-sc
-	log.Println("Shutting down gracefully.")
 }
