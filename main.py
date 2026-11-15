@@ -1,5 +1,6 @@
 import os
 import discord
+from discord import app_commands
 from discord.ext import commands
 import google.generativeai as genai
 
@@ -64,7 +65,7 @@ intents.message_content = True
 
 bot = commands.Bot(command_prefix="!", intents=intents)
 
-# متغير لحفظ آي دي الروم المخصص (يبدأ فاضي)
+# متغير لحفظ آي دي الروم المخصص
 ALLOWED_CHANNEL_ID = None
 
 @bot.event
@@ -82,7 +83,7 @@ async def on_ready():
 async def setchannel(interaction: discord.Interaction, channel: discord.TextChannel):
     global ALLOWED_CHANNEL_ID
     ALLOWED_CHANNEL_ID = channel.id
-    await interaction.response.send_message(f"✅ تم تحديد روم الدعم الفني/الردود تلقائياً: {channel.mention}", ephemeral=True)
+    await interaction.response.send_message(f"✅ تم تحديد روم الردود تلقائياً: {channel.mention}", ephemeral=True)
 
 @bot.event
 async def on_message(message):
@@ -95,7 +96,7 @@ async def on_message(message):
 
     should_respond = False
 
-    # الحالة الأولى: إذا كان الروم الحالي هو الروم المحدد بالسلاش (يرد بدون منشن ولا رد)
+    # الحالة الأولى: إذا كان الروم الحالي هو الروم المحدد بالسلاش
     if ALLOWED_CHANNEL_ID and message.channel.id == ALLOWED_CHANNEL_ID:
         should_respond = True
 
@@ -104,7 +105,6 @@ async def on_message(message):
         should_respond = True
 
     if should_respond:
-        # تنظيف المنشن لو وُجد
         clean_content = message.content.replace(f"<@{bot.user.id}>", "").strip()
         
         if not clean_content:
