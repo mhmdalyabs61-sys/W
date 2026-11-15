@@ -95,11 +95,10 @@ async def on_message(message):
             return
 
         async with message.channel.typing():
-            # قائمة الموديلات الاحتياطية مرتبة (لو واحد جاب خطأ 503 أو 404 ينتقل للي بعده تلقائياً)
+            # التحول المباشر لقائمة موديلات Pro الثابتة والبعيدة عن زحمة فلاش
             fallback_models = [
-                'gemini-3.8-flash',
-                'gemini-2.5-flash',
-                'gemini-flash-latest'
+                'gemini-2.5-pro',
+                'gemini-pro-latest'
             ]
             
             response_text = None
@@ -117,14 +116,14 @@ async def on_message(message):
                     )
                     response_text = response.text
                     success = True
-                    break # نجح الطلب، اخرج من اللوب
+                    break
                 except Exception as e:
-                    print(f"⚠️ فشل الموديل {model_name}: {e}")
-                    continue # جرب الموديل اللي بعده في القائمة
+                    print(f"⚠️ فشل موديل Pro الكلاسيكي {model_name}: {e}")
+                    continue
 
             if success and response_text:
                 await message.reply(response_text)
             else:
-                await message.reply("يا هلا، صار فيه ضغط مؤقت على السيرفرات، جرب ترسل رسالتك مرة ثانية بعد شوي!")
+                await message.reply("يا هلا، صار فيه ضغط مؤقت، جرب ترسل رسالتك بعد شوي.")
 
 bot.run(TOKEN)
