@@ -70,13 +70,18 @@ func main() {
 			count := int(optionMap["count"].IntValue())
 			channelID := i.ChannelID
 
-			s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
+			// الرد الأولي لتأكيد استلام الأمر
+			err := s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
 				Type: discordgo.InteractionResponseChannelMessageWithSource,
 				Data: &discordgo.InteractionResponseData{
-					Content: "جاري التنفيذ...",
+					Content: "جاري بدء الإرس...",
 					Flags:   discordgo.MessageFlagsEphemeral,
 				},
 			})
+			if err != nil {
+				log.Printf("Interaction error: %v", err)
+				return
+			}
 
 			go func() {
 				for j := 0; j < count; j++ {
@@ -95,6 +100,7 @@ func main() {
 								continue
 							}
 						}
+						log.Printf("Send error: %v", err)
 						break
 					}
 					time.Sleep(50 * time.Millisecond)
@@ -107,7 +113,6 @@ func main() {
 		log.Printf("Bot logged in as: %v", s.State.User.Username)
 	})
 
-	// تفعيل جميع النوايا عشان يقرأ ويرسل بالخاص والسيرفرات بدون مشاكل
 	sess.Identify.Intents = discordgo.IntentsAllWithoutPrivileged | discordgo.IntentGuilds | discordgo.IntentDirectMessages | discordgo.IntentGuildMessages
 
 	err = sess.Open()
