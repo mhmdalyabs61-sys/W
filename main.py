@@ -25,14 +25,13 @@ try:
             available_models.append(m.name)
             print(f" - متوفر: {m.name}")
     
-    # اختيار موديل فلاش تلقائياً لو متوفر، أو أول موديل متاح
     flash_models = [m for m in available_models if 'flash' in m]
     if flash_models:
         selected_model_name = flash_models[0]
     elif available_models:
         selected_model_name = available_models[0]
         
-    print(, f"✅ تم اختيار الموديل بنجاح: {selected_model_name}")
+    print(f"✅ تم اختيار الموديل بنجاح: {selected_model_name}")
 except Exception as e:
     print(f"⚠️ خطأ أثناء جلب الموديلات، سيتم استخدام الافتراضي: {e}")
 
