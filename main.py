@@ -2,7 +2,7 @@ import os
 import discord
 from discord import app_commands
 from discord.ext import commands
-import google.generativeai as genai
+from google import genai
 
 # 1. جلب المفاتيح من متغيرات البيئة (Railway)
 TOKEN = os.getenv("DISCORD_TOKEN")
@@ -11,8 +11,8 @@ GEMINI_API_KEY = os.getenv("GEMINI_API_KEY")
 if not TOKEN or not GEMINI_API_KEY:
     raise ValueError("⚠️ تأكد من إضافة DISCORD_TOKEN و GEMINI_API_KEY في متغيرات البيئة!")
 
-# 2. إعدادات جيمناي
-genai.configure(api_key=GEMINI_API_KEY)
+# 2. إعدادات جيمناي بالحزمة الجديدة
+client = genai.Client(api_key=GEMINI_API_KEY)
 
 # التعليمات الأساسية للبوت (System Prompt) مع السورسات والأسعار
 SYSTEM_INSTRUCTION = (
@@ -49,17 +49,6 @@ SYSTEM_INSTRUCTION = (
     "- للطلب أو الاستفسار التوجيه يكون روم <#1566292020002295921>."
 )
 
-generation_config = {
-    "temperature": 0.7,
-}
-
-# تم اختيار الموديل الصحيح والثابت بناءً على اللوقز الظاهرة
-model = genai.GenerativeModel(
-    model_name="models/gemini-2.5-flash",
-    generation_config=generation_config,
-    system_instruction=SYSTEM_INSTRUCTION
-)
-
 # 3. إعدادات دسكورد البوت
 intents = discord.Intents.default()
 intents.message_content = True
@@ -82,7 +71,7 @@ async def on_ready():
 async def setchannel(interaction: discord.Interaction, channel: discord.TextChannel):
     global ALLOWED_CHANNEL_ID
     ALLOWED_CHANNEL_ID = channel.id
-    await interaction.response.send_message(f"✅ تم تحديد روم الردود تلقائياً: {channel.mention}", ephemeral=True)
+    await interaction.response.send_message(f"✅ تم تحديد روم الردود تلقائياً: الحساب {channel.mention}", ephemeral=True)
 
 @bot.event
 async def on_message(message):
@@ -107,9 +96,16 @@ async def on_message(message):
 
         async with message.channel.typing():
             try:
-                response = model.generate_content(clean_content)
-                reply_text = response.text
-                await message.reply(reply_text)
+                # استخدام الطريقة الرسمية الحديثة لتوليد الرد مع دمج تعليمات النظام
+                response = client.models.generate_content(
+                    model='gemini-2.5-flash',
+                    contents=clean_content,
+                    config={
+                        'system_instruction': SYSTEM_INSTRUCTION,
+                        'temperature': 0.7,
+                    }
+                )
+                await message.reply(response.text)
             except Exception as e:
                 print(f"خطأ أثناء توليد الرد: {e}")
                 await message.reply("صار فيه خطأ بسيط، جرب مرة ثانية بعد شوي.")
