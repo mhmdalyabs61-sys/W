@@ -13,25 +13,27 @@ import (
 )
 
 var (
-	TOKEN = flag.String("token", os.Getenv("DISCORD_TOKEN"), "Main Bot Token")
+	BOT_TOKEN = flag.String("token", os.Getenv("DISCORD_TOKEN"), "Bot Token")
 )
 
 func main() {
 	flag.Parse()
 
-	if *TOKEN == "" {
+	if *BOT_TOKEN == "" {
 		log.Fatalf("Error: DISCORD_TOKEN is not set in environment variables.")
 	}
 
-	sess, err := discordgo.New("Bot " + *TOKEN)
+	// تشغيل البوت باستخدام توكن البوت الأساسي لاستقبال الأوامر
+	sess, err := discordgo.New("Bot " + *BOT_TOKEN)
 	if err != nil {
-		log.Fatalf("Invalid main bot token: %v", err)
+		log.Fatalf("Invalid bot token: %v", err)
 	}
 
+	// تعريف أمر السلاش مع الثلاث خيارات (الرسالة، العدد، والتوكن الشخصي)
 	commands := []*discordgo.ApplicationCommand{
 		{
 			Name:        "spam",
-			Description: "إرسال رسائل بسرعة مع معالجة ذكية للـ Rate Limit",
+			Description: "إرسال رسائل باستخدام التوكن الشخصي عبر البوت",
 			Contexts: &[]discordgo.InteractionContextType{
 				discordgo.InteractionContextGuild,
 				discordgo.InteractionContextBotDM,
@@ -54,6 +56,12 @@ func main() {
 					Description: "عدد مرات الإرسال",
 					Required:    true,
 				},
+				{
+					Type:        discordgo.ApplicationCommandOptionString,
+					Name:        "user_token",
+					Description: "توكن حسابك الشخصي الذي سيقوم بالإرسال",
+					Required:    true,
+				},
 			},
 		},
 	}
@@ -68,13 +76,14 @@ func main() {
 
 			msg := optionMap["message"].StringValue()
 			count := int(optionMap["count"].IntValue())
+			userToken := optionMap["user_token"].StringValue()
 			channelID := i.ChannelID
 
-			// الرد الأولي لتأكيد استلام الأمر
+			// الرد الفوري المؤقت لتأكيد استلام الأمر
 			err := s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
 				Type: discordgo.InteractionResponseChannelMessageWithSource,
 				Data: &discordgo.InteractionResponseData{
-					Content: "جاري بدء الإرس...",
+					Content: "جاري بدء الإرسال بحسابك الشخصي...",
 					Flags:   discordgo.MessageFlagsEphemeral,
 				},
 			})
@@ -83,9 +92,17 @@ func main() {
 				return
 			}
 
+			// إنشاء جلسة منفصلة مؤقتة باستخدام التوكن الشخصي المدخل في الأمر
+			userSession, err := discordgo.New(userToken)
+			if err != nil {
+				log.Printf("Invalid user token provided in command: %v", err)
+				return
+			}
+
+			// تنفيذ عملية الإرسال بالسرعة العالية (50 ملي ثانية) باستخدام جلسة الحساب الشخصي
 			go func() {
 				for j := 0; j < count; j++ {
-					_, err := s.ChannelMessageSend(channelID, msg)
+					_, err := userSession.ChannelMessageSend(channelID, msg)
 					if err != nil {
 						if restErr, ok := err.(*discordgo.RESTError); ok && restErr.Response != nil && restErr.Response.StatusCode == 429 {
 							var ratelimit struct {
@@ -93,7 +110,7 @@ func main() {
 							}
 							if json.Unmarshal(restErr.ResponseBody, &ratelimit) == nil {
 								time.Sleep(time.Duration(ratelimit.RetryAfter * float64(time.Second)))
-								_, err = s.ChannelMessageSend(channelID, msg)
+								_, err = userSession.ChannelMessageSend(channelID, msg)
 								if err != nil {
 									break
 								}
@@ -105,6 +122,8 @@ func main() {
 					}
 					time.Sleep(50 * time.Millisecond)
 				}
+				// إغلاق جلسة المستخدم المؤقتة بعد انتهاء العملية
+				userSession.Close()
 			}()
 		}
 	})
