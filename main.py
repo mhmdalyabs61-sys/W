@@ -4,14 +4,14 @@ from discord import app_commands
 from discord.ext import commands
 from google import genai
 
-# جلب المفاتيح من متغيرات البيئة
+# 1. جلب المفاتيح من متغيرات البيئة (Railway)
 TOKEN = os.getenv("DISCORD_TOKEN")
 GEMINI_API_KEY = os.getenv("GEMINI_API_KEY")
 
 if not TOKEN or not GEMINI_API_KEY:
     raise ValueError("⚠️ تأكد من إضافة DISCORD_TOKEN و GEMINI_API_KEY في متغيرات البيئة!")
 
-# تهيئة العميل بالحزمة الرسمية الجديدة
+# 2. إعدادات جيمناي بالحزمة الجديدة
 client = genai.Client(api_key=GEMINI_API_KEY)
 
 # التعليمات الأساسية للبوت (System Prompt) مع السورسات والأسعار
@@ -49,17 +49,19 @@ SYSTEM_INSTRUCTION = (
     "- للطلب أو الاستفسار التوجيه يكون روم <#1566292020002295921>."
 )
 
+# 3. إعدادات دسكورد البوت
 intents = discord.Intents.default()
 intents.message_content = True
 
 bot = commands.Bot(command_prefix="!", intents=intents)
+
 ALLOWED_CHANNEL_ID = None
 
 @bot.event
 async def on_ready():
     try:
         await bot.tree.sync()
-        print("✅ تم مزامنة أوامر السلاش بنجاح.")
+        print(f"✅ تم مزامنة أوامر السلاش بنجاح.")
     except Exception as e:
         print(f"خطأ في مزامنة الأوامر: {e}")
     print(f"✅ تم تسجيل الدخول بنجاح باسم: {bot.user.name}")
@@ -93,19 +95,36 @@ async def on_message(message):
             return
 
         async with message.channel.typing():
-            try:
-                # الاستدعاء الصحيح والمطابق لتوثيق جوجل الرسمي لموديل gemini-3.8-flash
-                response = client.models.generate_content(
-                    model='gemini-3.8-flash',
-                    contents=clean_content,
-                    config={
-                        'system_instruction': SYSTEM_INSTRUCTION,
-                        'temperature': 0.7,
-                    }
-                )
-                await message.reply(response.text)
-            except Exception as e:
-                print(f"خطأ أثناء توليد الرد: {e}")
-                await message.reply("صار فيه خطأ بسيط، جرب مرة ثانية بعد شوي.")
+            # قائمة الموديلات الاحتياطية مرتبة (لو واحد جاب خطأ 503 أو 404 ينتقل للي بعده تلقائياً)
+            fallback_models = [
+                'gemini-3.8-flash',
+                'gemini-2.5-flash',
+                'gemini-flash-latest'
+            ]
+            
+            response_text = None
+            success = False
+
+            for model_name in fallback_models:
+                try:
+                    response = client.models.generate_content(
+                        model=model_name,
+                        contents=clean_content,
+                        config={
+                            'system_instruction': SYSTEM_INSTRUCTION,
+                            'temperature': 0.7,
+                        }
+                    )
+                    response_text = response.text
+                    success = True
+                    break # نجح الطلب، اخرج من اللوب
+                except Exception as e:
+                    print(f"⚠️ فشل الموديل {model_name}: {e}")
+                    continue # جرب الموديل اللي بعده في القائمة
+
+            if success and response_text:
+                await message.reply(response_text)
+            else:
+                await message.reply("يا هلا، صار فيه ضغط مؤقت على السيرفرات، جرب ترسل رسالتك مرة ثانية بعد شوي!")
 
 bot.run(TOKEN)
