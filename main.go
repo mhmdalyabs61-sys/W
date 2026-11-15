@@ -28,7 +28,6 @@ func main() {
 		log.Fatalf("Invalid main bot token: %v", err)
 	}
 
-	// تعريف أمر السلاش
 	commands := []*discordgo.ApplicationCommand{
 		{
 			Name:        "spam",
@@ -59,7 +58,6 @@ func main() {
 		},
 	}
 
-	// استقبال الأوامر والتفاعل معها
 	sess.AddHandler(func(s *discordgo.Session, i *discordgo.InteractionCreate) {
 		if i.ApplicationCommandData().Name == "spam" {
 			options := i.ApplicationCommandData().Options
@@ -72,7 +70,6 @@ func main() {
 			count := int(optionMap["count"].IntValue())
 			channelID := i.ChannelID
 
-			// رد فوري مخفي
 			s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
 				Type: discordgo.InteractionResponseChannelMessageWithSource,
 				Data: &discordgo.InteractionResponseData{
@@ -81,22 +78,18 @@ func main() {
 				},
 			})
 
-			// إرسال الرسائل مع القراءة الذكية للحدود
 			go func() {
 				for j := 0; j < count; j++ {
 					_, err := s.ChannelMessageSend(channelID, msg)
 					if err != nil {
-						// التحقق إذا كان الخطأ هو Rate Limit (رمز 429)
 						if restErr, ok := err.(*discordgo.RESTError); ok && restErr.Response != nil && restErr.Response.StatusCode == 429 {
 							var ratelimit struct {
 								RetryAfter float64 `json:"retry_after"`
 							}
 							if json.Unmarshal(restErr.ResponseBody, &ratelimit) == nil {
 								log.Printf("Hit Rate Limit! Waiting for %.2f seconds...", ratelimit.RetryAfter)
-								// ينتظر الوقت المحدد بالضبط اللي طلبه ديسكورد
 								time.Sleep(time.Duration(ratelimit.RetryAfter * float64(time.Second)))
 								
-								// إعادة محاولة إرسال الرسالة الحالية بعد انتهاء الانتظار
 								_, err = s.ChannelMessageSend(channelID, msg)
 								if err != nil {
 									log.Printf("Failed after retry: %v", err)
@@ -110,7 +103,6 @@ func main() {
 						break
 					}
 					
-					// فاصل سريع جداً بين الرسائل (50 ملي ثانية)
 					time.Sleep(50 * time.Millisecond)
 				}
 			}()
@@ -133,4 +125,8 @@ func main() {
 	}
 
 	log.Println("Bot is running. Press CTRL-C to exit.")
-	sc := make(chan os
+	sc := make(chan os.Signal, 1)
+	signal.Notify(sc, syscall.SIGINT, syscall.SIGTERM, os.Interrupt)
+	<-sc
+	log.Println("Shutting down gracefully.")
+}
