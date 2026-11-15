@@ -4,14 +4,14 @@ from discord import app_commands
 from discord.ext import commands
 from google import genai
 
-# 1. جلب المفاتيح من متغيرات البيئة (Railway)
+# جلب المفاتيح من متغيرات البيئة
 TOKEN = os.getenv("DISCORD_TOKEN")
 GEMINI_API_KEY = os.getenv("GEMINI_API_KEY")
 
 if not TOKEN or not GEMINI_API_KEY:
     raise ValueError("⚠️ تأكد من إضافة DISCORD_TOKEN و GEMINI_API_KEY في متغيرات البيئة!")
 
-# 2. إعدادات جيمناي بالحزمة الجديدة
+# تهيئة العميل بالحزمة الرسمية الجديدة
 client = genai.Client(api_key=GEMINI_API_KEY)
 
 # التعليمات الأساسية للبوت (System Prompt) مع السورسات والأسعار
@@ -49,19 +49,17 @@ SYSTEM_INSTRUCTION = (
     "- للطلب أو الاستفسار التوجيه يكون روم <#1566292020002295921>."
 )
 
-# 3. إعدادات دسكورد البوت
 intents = discord.Intents.default()
 intents.message_content = True
 
 bot = commands.Bot(command_prefix="!", intents=intents)
-
 ALLOWED_CHANNEL_ID = None
 
 @bot.event
 async def on_ready():
     try:
         await bot.tree.sync()
-        print(f"✅ تم مزامنة أوامر السلاش بنجاح.")
+        print("✅ تم مزامنة أوامر السلاش بنجاح.")
     except Exception as e:
         print(f"خطأ في مزامنة الأوامر: {e}")
     print(f"✅ تم تسجيل الدخول بنجاح باسم: {bot.user.name}")
@@ -71,7 +69,7 @@ async def on_ready():
 async def setchannel(interaction: discord.Interaction, channel: discord.TextChannel):
     global ALLOWED_CHANNEL_ID
     ALLOWED_CHANNEL_ID = channel.id
-    await interaction.response.send_message(f"✅ تم تحديد روم الردود تلقائياً: الحساب {channel.mention}", ephemeral=True)
+    await interaction.response.send_message(f"✅ تم تحديد روم الردود تلقائياً: {channel.mention}", ephemeral=True)
 
 @bot.event
 async def on_message(message):
@@ -96,9 +94,9 @@ async def on_message(message):
 
         async with message.channel.typing():
             try:
-                # استخدام الطريقة الرسمية الحديثة لتوليد الرد مع دمج تعليمات النظام
+                # الاستدعاء الصحيح والمطابق لتوثيق جوجل الرسمي لموديل gemini-3.8-flash
                 response = client.models.generate_content(
-                    model='gemini-2.5-flash',
+                    model='gemini-3.8-flash',
                     contents=clean_content,
                     config={
                         'system_instruction': SYSTEM_INSTRUCTION,
