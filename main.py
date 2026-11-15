@@ -1,151 +1,96 @@
-package main
+import os
+import discord
+from discord.ext import commands
+import google.generativeai as genai
 
-import (
-	"encoding/json"
-	"flag"
-	"log"
-	"os"
-	"os/signal"
-	"syscall"
-	"time"
+# 1. جلب المفاتيح من متغيرات البيئة (Railway)
+TOKEN = os.getenv("DISCORD_TOKEN")
+GEMINI_API_KEY = os.getenv("GEMINI_API_KEY")
 
-	"github.com/bwmarrin/discordgo"
+# التحقق من وجود المفاتيح
+if not TOKEN or not GEMINI_API_KEY:
+    raise ValueError("⚠️ تأكد من إضافة DISCORD_TOKEN و GEMINI_API_KEY في متغيرات البيئة!")
+
+# 2. إعدادات جيمناي
+genai.configure(api_key=GEMINI_API_KEY)
+
+# التعليمات الأساسية للببوت (System Prompt) المحدثة مع السورسات والأسعار
+SYSTEM_INSTRUCTION = (
+    "أنت مساعد ذكي وممثل رسمي لفريق متجر دسكورد. أسلوبك عفوي، وفيّ، وبدون سماجة.\n\n"
+    "قواعدك الصارمة:\n"
+    "1. إذا سألك أي شخص عن لغة برمجتك، أو تقنيتك، أو من هو صانعك، أو بأي API مربوط، أجب دائماً وبكل ثقة: "
+    "'أنا صنعني فريق المتجر هنا، هم اللي برمجوني وظبطوني عشان أخدمكم!' ولا تذكر أبداً لغة Python أو Google Gemini أو أي تفاصيل تقنية.\n"
+    "2. في الأسئلة العامة مثل الألعاب (مثل روكت ليق) والرياضة، جاوب بشكل طبيعي وذكي.\n"
+    "3. أنت على دراية كاملة بمنتجات وسورسات المتجر وأسعارها:\n"
+    "- سستم 222 | 15\n"
+    "- كنترول | 15\n"
+    "- افتار بنل | 15\n"
+    "- بنك | 15\n"
+    "- بوت بوستات | 15\n"
+    "- شاره (نيترو - بوست) | 15\n"
+    "- برودكاست | 10\n"
+    "- طرق دفع | 10\n"
+    "- نسخ سيرفرات | 10\n"
+    "- زاجل | 15\n"
+    "- شراء تلقائي | 15\n"
+    "- تقييم | 7\n"
+    "- توب رياكشن (نسختين بـ 7 و 10)\n"
+    "- بوت افكتات | 10\n"
+    "- تكت | 10\n"
+    "- قروبات | 20\n"
+    "- توكن كنترول | 15\n"
+    "- تثبيت حسابات | 10\n"
+    "- خط تلقائي | 10\n"
+    "- قيفاوي | 10\n"
+    "- حالة ستريم | 10\n"
+    "- عرض خاص: جميع السورسات بـ 21 لفترة محدودة!\n\n"
+    "ملاحظات مهمة للزباين:\n"
+    "- السورسات ما عليها شرح.\n"
+    "- للطلب أو الاستفسار التوجيه يكون روم <#1566292020002295921>."
 )
 
-var (
-	BOT_TOKEN = flag.String("token", os.Getenv("DISCORD_TOKEN"), "Bot Token")
-)
-
-func main() {
-	flag.Parse()
-
-	if *BOT_TOKEN == "" {
-		log.Fatalf("Error: DISCORD_TOKEN is not set in environment variables.")
-	}
-
-	// تشغيل البوت باستخدام توكن البوت الأساسي لاستقبال الأوامر
-	sess, err := discordgo.New("Bot " + *BOT_TOKEN)
-	if err != nil {
-		log.Fatalf("Invalid bot token: %v", err)
-	}
-
-	// تعريف أمر السلاش مع الثلاث خيارات (الرسالة، العدد، والتوكن الشخصي)
-	commands := []*discordgo.ApplicationCommand{
-		{
-			Name:        "spam",
-			Description: "إرسال رسائل بسرعة فائقة باستخدام التوكن الشخصي عبر البوت",
-			Contexts: &[]discordgo.InteractionContextType{
-				discordgo.InteractionContextGuild,
-				discordgo.InteractionContextBotDM,
-				discordgo.InteractionContextPrivateChannel,
-			},
-			IntegrationTypes: &[]discordgo.ApplicationIntegrationType{
-				discordgo.ApplicationIntegrationGuildInstall,
-				discordgo.ApplicationIntegrationUserInstall,
-			},
-			Options: []*discordgo.ApplicationCommandOption{
-				{
-					Type:        discordgo.ApplicationCommandOptionString,
-					Name:        "message",
-					Description: "النص المراد إرساله",
-					Required:    true,
-				},
-				{
-					Type:        discordgo.ApplicationCommandOptionInteger,
-					Name:        "count",
-					Description: "عدد مرات الإرسال",
-					Required:    true,
-				},
-				{
-					Type:        discordgo.ApplicationCommandOptionString,
-					Name:        "user_token",
-					Description: "توكن حسابك الشخصي الذي سيقوم بالإرسال",
-					Required:    true,
-				},
-			},
-		},
-	}
-
-	sess.AddHandler(func(s *discordgo.Session, i *discordgo.InteractionCreate) {
-		if i.ApplicationCommandData().Name == "spam" {
-			options := i.ApplicationCommandData().Options
-			optionMap := make(map[string]*discordgo.ApplicationCommandInteractionDataOption, len(options))
-			for _, opt := range options {
-				optionMap[opt.Name] = opt
-			}
-
-			msg := optionMap["message"].StringValue()
-			count := int(optionMap["count"].IntValue())
-			userToken := optionMap["user_token"].StringValue()
-			channelID := i.ChannelID
-
-			// الرد الفوري المؤقت لتأكيد استلام الأمر
-			err := s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
-				Type: discordgo.InteractionResponseChannelMessageWithSource,
-				Data: &discordgo.InteractionResponseData{
-					Content: "جاري الإرسال بسرعة الصاروخ...",
-					Flags:   discordgo.MessageFlagsEphemeral,
-				},
-			})
-			if err != nil {
-				log.Printf("Interaction error: %v", err)
-				return
-			}
-
-			// إنشاء جلسة مؤقتة باستخدام التوكن الشخصي المدخل في الأمر
-			userSession, err := discordgo.New(userToken)
-			if err != nil {
-				log.Printf("Invalid user token provided in command: %v", err)
-				return
-			}
-
-			// تنفيذ عملية الإرسال المتوازي بأقصى سرعة بدون انتظار
-			go func() {
-				for j := 0; j < count; j++ {
-					go func() {
-						_, err := userSession.ChannelMessageSend(channelID, msg)
-						if err != nil {
-							if restErr, ok := err.(*discordgo.RESTError); ok && restErr.Response != nil && restErr.Response.StatusCode == 429 {
-								var ratelimit struct {
-									RetryAfter float64 `json:"retry_after"`
-								}
-								if json.Unmarshal(restErr.ResponseBody, &ratelimit) == nil {
-									time.Sleep(time.Duration(ratelimit.RetryAfter * float64(time.Second)))
-									userSession.ChannelMessageSend(channelID, msg)
-								}
-							}
-						}
-					}()
-					// فاصل زمني صغير جداً (10 ملي ثانية) لمنع حظر الاتصال الفوري وتدفق الرسائل بسرعة جنونية
-					time.Sleep(10 * time.Millisecond)
-				}
-				
-				// مهلة بسيطة لضمان خروج الـ Goroutines وتفريغ الجلسة
-				time.Sleep(5 * time.Second)
-				userSession.Close()
-			}()
-		}
-	})
-
-	sess.AddHandler(func(s *discordgo.Session, r *discordgo.Ready) {
-		log.Printf("Bot logged in as: %v", s.State.User.Username)
-	})
-
-	sess.Identify.Intents = discordgo.IntentsAllWithoutPrivileged | discordgo.IntentGuilds | discordgo.IntentDirectMessages | discordgo.IntentGuildMessages
-
-	err = sess.Open()
-	if err != nil {
-		log.Fatalf("Cannot open connection: %v", err)
-	}
-	defer sess.Close()
-
-	_, err = sess.ApplicationCommandBulkOverwrite(sess.State.User.ID, "", commands)
-	if err != nil {
-		log.Fatalf("Cannot create commands: %v", err)
-	}
-
-	log.Println("Bot is running. Press CTRL-C to exit.")
-	sc := make(chan os.Signal, 1)
-	signal.Notify(sc, syscall.SIGINT, syscall.SIGTERM, os.Interrupt)
-	<-sc
+generation_config = {
+    "temperature": 0.7,
 }
+
+model = genai.GenerativeModel(
+    model_name="gemini-1.5-flash",
+    generation_config=generation_config,
+    system_instruction=SYSTEM_INSTRUCTION
+)
+
+# 3. إعدادات دسكورد البوت
+intents = discord.Intents.default()
+intents.message_content = True
+
+bot = commands.Bot(command_prefix="!", intents=intents)
+
+@bot.event
+async def on_ready():
+    print(f"✅ تم تسجيل الدخول بنجاح باسم: {bot.user.name}")
+
+@bot.event
+async def on_message(message):
+    if message.author == bot.user:
+        return
+
+    # الرد عند منشن البوت أو في الرسائل الخاصة
+    if bot.user.mentioned_in(message) or isinstance(message.channel, discord.DMChannel):
+        clean_content = message.content.replace(f"<@{bot.user.id}>", "").strip()
+        
+        if not clean_content:
+            return
+
+        async with message.channel.typing():
+            try:
+                response = model.generate_content(clean_content)
+                reply_text = response.text
+                await message.reply(reply_text)
+            except Exception as e:
+                print(f"خطأ أثناء توليد الرد: {e}")
+                await message.reply("صار فيه خطأ بسيط، جرب مرة ثانية بعد شوي.")
+
+    await bot.parse_command(message)
+
+# تشغيل البوت
+bot.run(TOKEN)
