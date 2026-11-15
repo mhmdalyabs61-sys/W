@@ -3,12 +3,9 @@ package main
 import (
 	"encoding/json"
 	"flag"
-	"fmt"
 	"log"
 	"os"
 	"os/signal"
-	"strings"
-	"sync"
 	"syscall"
 	"time"
 
@@ -31,11 +28,11 @@ func main() {
 		log.Fatalf("Invalid main bot token: %v", err)
 	}
 
-	// تعريف أمر السلاش مع دعم التشغيل في الخاص وفي السيرفرات (User Install & DMs)
+	// تعريف أمر السلاش
 	commands := []*discordgo.ApplicationCommand{
 		{
 			Name:        "spam",
-			Description: "إرسال رسائل بسرعة عالية مع احترام حدود ديسكورد لكل بوت",
+			Description: "إرسال رسائل بسرعة مع معالجة ذكية للـ Rate Limit",
 			Contexts: &[]discordgo.InteractionContextType{
 				discordgo.InteractionContextGuild,
 				discordgo.InteractionContextBotDM,
@@ -55,13 +52,7 @@ func main() {
 				{
 					Type:        discordgo.ApplicationCommandOptionInteger,
 					Name:        "count",
-					Description: "عدد مرات الإرسال لكل بوت",
-					Required:    true,
-				},
-				{
-					Type:        discordgo.ApplicationCommandOptionString,
-					Name:        "tokens",
-					Description: "توكنات البوتات الفرعية (افصل بينها بفاصلة أو مسافة)",
+					Description: "عدد مرات الإرسال",
 					Required:    true,
 				},
 			},
@@ -79,25 +70,50 @@ func main() {
 
 			msg := optionMap["message"].StringValue()
 			count := int(optionMap["count"].IntValue())
-			rawTokens := optionMap["tokens"].StringValue()
 			channelID := i.ChannelID
 
-			// تقسيم التوكنات وتصفيتها
-			tokens := strings.FieldsFunc(rawTokens, func(r rune) bool {
-				return r == ',' || r == ' ' || r == '\n'
-			})
-
-			// رد فوري مخفي لعدم تعليق ديسكورد
+			// رد فوري مخفي
 			s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
 				Type: discordgo.InteractionResponseChannelMessageWithSource,
 				Data: &discordgo.InteractionResponseData{
-					Content: fmt.Sprintf("جاري التنفيذ الذكي عبر %d بوت مع إدارة الـ Rate Limits...", len(tokens)),
+					Content: "جاري الإرسال بمعالجة ذكية للـ Rate Limits...",
 					Flags:   discordgo.MessageFlagsEphemeral,
 				},
 			})
 
-			// تشغيل البوتات الفرعية بالتوازي التام
-			go executeWorkerBots(tokens, channelID, msg, count)
+			// إرسال الرسائل مع القراءة الذكية للحدود
+			go func() {
+				for j := 0; j < count; j++ {
+					_, err := s.ChannelMessageSend(channelID, msg)
+					if err != nil {
+						// التحقق إذا كان الخطأ هو Rate Limit (رمز 429)
+						if restErr, ok := err.(*discordgo.RESTError); ok && restErr.Response != nil && restErr.Response.StatusCode == 429 {
+							var ratelimit struct {
+								RetryAfter float64 `json:"retry_after"`
+							}
+							if json.Unmarshal(restErr.ResponseBody, &ratelimit) == nil {
+								log.Printf("Hit Rate Limit! Waiting for %.2f seconds...", ratelimit.RetryAfter)
+								// ينتظر الوقت المحدد بالضبط اللي طلبه ديسكورد
+								time.Sleep(time.Duration(ratelimit.RetryAfter * float64(time.Second)))
+								
+								// إعادة محاولة إرسال الرسالة الحالية بعد انتهاء الانتظار
+								_, err = s.ChannelMessageSend(channelID, msg)
+								if err != nil {
+									log.Printf("Failed after retry: %v", err)
+									break
+								}
+								continue
+							}
+						}
+						
+						log.Printf("Failed to send message: %v", err)
+						break
+					}
+					
+					// فاصل سريع جداً بين الرسائل (50 ملي ثانية)
+					time.Sleep(50 * time.Millisecond)
+				}
+			}()
 		}
 	})
 
@@ -117,63 +133,4 @@ func main() {
 	}
 
 	log.Println("Bot is running. Press CTRL-C to exit.")
-	sc := make(chan os.Signal, 1)
-	signal.Notify(sc, syscall.SIGINT, syscall.SIGTERM, os.Interrupt)
-	<-sc
-	log.Println("Shutting down gracefully.")
-}
-
-// دالة تنفيذ الإرسال المتوازي مع معالجة الـ Rate Limit لكل بوت بشكل مستقل
-func executeWorkerBots(tokens []string, channelID string, message string, count int) {
-	var wg sync.WaitGroup
-
-	for idx, t := range tokens {
-		cleanToken := strings.TrimSpace(t)
-		if cleanToken == "" {
-			continue
-		}
-
-		wg.Add(1)
-		go func(workerID int, botToken string) {
-			defer wg.Done()
-
-			workerSess, err := discordgo.New("Bot " + botToken)
-			if err != nil {
-				log.Printf("[Worker %d] Invalid token: %v", workerID, err)
-				return
-			}
-
-			for j := 0; j < count; j++ {
-				_, err := workerSess.ChannelMessageSend(channelID, message)
-				if err != nil {
-					// التحقق إذا كان الخطأ هو Rate Limit (رمز 429)
-					if restErr, ok := err.(*discordgo.RESTError); ok && restErr.Response != nil && restErr.Response.StatusCode == 429 {
-						var ratelimit struct {
-							RetryAfter float64 `json:"retry_after"`
-						}
-						if json.Unmarshal(restErr.ResponseBody, &ratelimit) == nil {
-							log.Printf("[Worker %d] Hit Rate Limit. Waiting for %.2f seconds...", workerID, ratelimit.RetryAfter)
-							// إيقاف هذا البوت لوحده للوقت المحدّد دون إيقاف باقي البوتات
-							time.Sleep(time.Duration(ratelimit.RetryAfter * float64(time.Second)))
-							
-							// إعادة محاولة إرسال الرسالة الحالية بعد انتهاء فترة الانتظار
-							_, err = workerSess.ChannelMessageSend(channelID, message)
-							if err != nil {
-								log.Printf("[Worker %d] Failed after retry: %v", workerID, err)
-								break
-							}
-							continue
-						}
-					}
-					
-					// في حال حدوث أي خطأ آخر، يتوقف هذا البوت فقط
-					log.Printf("[Worker %d] Error: %v", workerID, err)
-					break
-				}
-			}
-		}(idx+1, cleanToken)
-	}
-
-	wg.Wait()
-	log.Println("All worker tasks completed.")
-}
+	sc := make(chan os
