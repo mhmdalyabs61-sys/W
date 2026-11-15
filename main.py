@@ -53,9 +53,18 @@ generation_config = {
     "temperature": 0.7,
 }
 
-# التعريف الصحيح المعتمد بالمكتبة القديمة
+# اختيار الموديل تلقائياً بدون أخطاء 404
+selected_model_name = "models/gemini-1.5-flash"
+try:
+    for m in genai.list_models():
+        if 'generateContent' in m.supported_generation_methods and 'flash' in m.name:
+            selected_model_name = m.name
+            break
+except Exception as e:
+    print(f"تنبيه أثناء اختيار الموديل: {e}")
+
 model = genai.GenerativeModel(
-    model_name="models/gemini-1.5-flash",
+    model_name=selected_model_name,
     generation_config=generation_config,
     system_instruction=SYSTEM_INSTRUCTION
 )
@@ -75,7 +84,7 @@ async def on_ready():
         print(f"✅ تم مزامنة أوامر السلاش بنجاح.")
     except Exception as e:
         print(f"خطأ في مزامنة الأوامر: {e}")
-    print(f"✅ تم تسجيل الدخول بنجاح باسم: {bot.user.name}")
+    print(f"✅ تم تسجيل الدخول بنجاح باسم: {bot.user.name} | استخدام موديل: {selected_model_name}")
 
 @bot.tree.command(name="setchannel", description="تحديد الروم الذي سيجيب فيه البوت تلقائياً بدون منشن")
 @app_commands.default_permissions(administrator=True)
