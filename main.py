@@ -14,27 +14,6 @@ if not TOKEN or not GEMINI_API_KEY:
 # 2. إعدادات جيمناي
 genai.configure(api_key=GEMINI_API_KEY)
 
-# طباعة الموديلات المتاحة في اللوقز عشان نشوفها صح
-print("🔍 جاري فحص الموديلات المتاحة في حسابك...")
-selected_model_name = "models/gemini-1.5-flash"
-
-try:
-    available_models = []
-    for m in genai.list_models():
-        if 'generateContent' in m.supported_generation_methods:
-            available_models.append(m.name)
-            print(f" - متوفر: {m.name}")
-    
-    flash_models = [m for m in available_models if 'flash' in m]
-    if flash_models:
-        selected_model_name = flash_models[0]
-    elif available_models:
-        selected_model_name = available_models[0]
-        
-    print(f"✅ تم اختيار الموديل بنجاح: {selected_model_name}")
-except Exception as e:
-    print(f"⚠️ خطأ أثناء جلب الموديلات، سيتم استخدام الافتراضي: {e}")
-
 # التعليمات الأساسية للبوت (System Prompt) مع السورسات والأسعار
 SYSTEM_INSTRUCTION = (
     "أنت مساعد ذكي وممثل رسمي لفريق متجر دسكورد. أسلوبك عفوي، وفيّ، وبدون سماجة.\n\n"
@@ -74,8 +53,9 @@ generation_config = {
     "temperature": 0.7,
 }
 
+# تم اختيار الموديل الصحيح والثابت بناءً على اللوقز الظاهرة
 model = genai.GenerativeModel(
-    model_name=selected_model_name,
+    model_name="models/gemini-2.5-flash",
     generation_config=generation_config,
     system_instruction=SYSTEM_INSTRUCTION
 )
