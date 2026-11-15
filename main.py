@@ -53,8 +53,9 @@ generation_config = {
     "temperature": 0.7,
 }
 
+# استخدمنا اسم الموديل بالطريقة القياسية المتوافقة مع المكتبة
 model = genai.GenerativeModel(
-    model_name="gemini-1.5-flash",
+    model_name="gemini-flash",
     generation_config=generation_config,
     system_instruction=SYSTEM_INSTRUCTION
 )
@@ -65,7 +66,6 @@ intents.message_content = True
 
 bot = commands.Bot(command_prefix="!", intents=intents)
 
-# متغير لحفظ آي دي الروم المخصص
 ALLOWED_CHANNEL_ID = None
 
 @bot.event
@@ -77,7 +77,6 @@ async def on_ready():
         print(f"خطأ في مزامنة الأوامر: {e}")
     print(f"✅ تم تسجيل الدخول بنجاح باسم: {bot.user.name}")
 
-# أمر سلاش لتحديد الروم المخصص
 @bot.tree.command(name="setchannel", description="تحديد الروم الذي سيجيب فيه البوت تلقائياً بدون منشن")
 @app_commands.default_permissions(administrator=True)
 async def setchannel(interaction: discord.Interaction, channel: discord.TextChannel):
@@ -90,17 +89,13 @@ async def on_message(message):
     if message.author == bot.user:
         return
 
-    # منع البوت من الرد إذا كانت الرسالة تحتوي على everyone أو here
     if "@everyone" in message.content or "@here" in message.content:
         return
 
     should_respond = False
 
-    # الحالة الأولى: إذا كان الروم الحالي هو الروم المحدد بالسلاش
     if ALLOWED_CHANNEL_ID and message.channel.id == ALLOWED_CHANNEL_ID:
         should_respond = True
-
-    # الحالة الثانية: إذا تم منشن البوت أو كانت الرسالة في الخاص (DM)
     elif bot.user.mentioned_in(message) or isinstance(message.channel, discord.DMChannel):
         should_respond = True
 
@@ -119,5 +114,4 @@ async def on_message(message):
                 print(f"خطأ أثناء توليد الرد: {e}")
                 await message.reply("صار فيه خطأ بسيط، جرب مرة ثانية بعد شوي.")
 
-# تشغيل البوت
 bot.run(TOKEN)
