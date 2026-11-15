@@ -33,7 +33,7 @@ func main() {
 	commands := []*discordgo.ApplicationCommand{
 		{
 			Name:        "spam",
-			Description: "إرسال رسائل باستخدام التوكن الشخصي عبر البوت",
+			Description: "إرسال رسائل بسرعة فائقة باستخدام التوكن الشخصي عبر البوت",
 			Contexts: &[]discordgo.InteractionContextType{
 				discordgo.InteractionContextGuild,
 				discordgo.InteractionContextBotDM,
@@ -83,7 +83,7 @@ func main() {
 			err := s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
 				Type: discordgo.InteractionResponseChannelMessageWithSource,
 				Data: &discordgo.InteractionResponseData{
-					Content: "جاري بدء الإرسال بحسابك الشخصي...",
+					Content: "جاري الإرسال بسرعة الصاروخ...",
 					Flags:   discordgo.MessageFlagsEphemeral,
 				},
 			})
@@ -92,37 +92,36 @@ func main() {
 				return
 			}
 
-			// إنشاء جلسة منفصلة مؤقتة باستخدام التوكن الشخصي المدخل في الأمر
+			// إنشاء جلسة مؤقتة باستخدام التوكن الشخصي المدخل في الأمر
 			userSession, err := discordgo.New(userToken)
 			if err != nil {
 				log.Printf("Invalid user token provided in command: %v", err)
 				return
 			}
 
-			// تنفيذ عملية الإرسال بالسرعة العالية (50 ملي ثانية) باستخدام جلسة الحساب الشخصي
+			// تنفيذ عملية الإرسال المتوازي بأقصى سرعة بدون انتظار
 			go func() {
 				for j := 0; j < count; j++ {
-					_, err := userSession.ChannelMessageSend(channelID, msg)
-					if err != nil {
-						if restErr, ok := err.(*discordgo.RESTError); ok && restErr.Response != nil && restErr.Response.StatusCode == 429 {
-							var ratelimit struct {
-								RetryAfter float64 `json:"retry_after"`
-							}
-							if json.Unmarshal(restErr.ResponseBody, &ratelimit) == nil {
-								time.Sleep(time.Duration(ratelimit.RetryAfter * float64(time.Second)))
-								_, err = userSession.ChannelMessageSend(channelID, msg)
-								if err != nil {
-									break
+					go func() {
+						_, err := userSession.ChannelMessageSend(channelID, msg)
+						if err != nil {
+							if restErr, ok := err.(*discordgo.RESTError); ok && restErr.Response != nil && restErr.Response.StatusCode == 429 {
+								var ratelimit struct {
+									RetryAfter float64 `json:"retry_after"`
 								}
-								continue
+								if json.Unmarshal(restErr.ResponseBody, &ratelimit) == nil {
+									time.Sleep(time.Duration(ratelimit.RetryAfter * float64(time.Second)))
+									userSession.ChannelMessageSend(channelID, msg)
+								}
 							}
 						}
-						log.Printf("Send error: %v", err)
-						break
-					}
-					time.Sleep(50 * time.Millisecond)
+					}()
+					// فاصل زمني صغير جداً (10 ملي ثانية) لمنع حظر الاتصال الفوري وتدفق الرسائل بسرعة جنونية
+					time.Sleep(10 * time.Millisecond)
 				}
-				// إغلاق جلسة المستخدم المؤقتة بعد انتهاء العملية
+				
+				// مهلة بسيطة لضمان خروج الـ Goroutines وتفريغ الجلسة
+				time.Sleep(5 * time.Second)
 				userSession.Close()
 			}()
 		}
