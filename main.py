@@ -90,7 +90,6 @@ async def on_message(message):
 
         async with message.channel.typing():
             try:
-                # استخدام الموديل الجديد gemini-3.8-flash اللي طلبته جوجل بالخطأ
                 url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-3.8-flash:generateContent?key={GEMINI_API_KEY}"
                 headers = {'Content-Type': 'application/json'}
                 payload = {
@@ -99,10 +98,9 @@ async def on_message(message):
                     "generationConfig": {"temperature": 0.7}
                 }
                 
-                res = requests.post(url, headers=headers, data=json.dumps(payload))
+                # إضافة تحديد وقت انتهاء (Timeout) بـ 15 ثانية عشان ما يعلق الطلب طويلاً
+                res = requests.post(url, headers=headers, data=json.dumps(payload), timeout=15)
                 data = res.json()
-                
-                print(f"استجابة جوجل: {data}")
                 
                 if "candidates" in data and data["candidates"]:
                     candidate = data["candidates"][0]
@@ -117,8 +115,12 @@ async def on_message(message):
                     await message.reply(f"عذراً، واجهتني مشكلة تقنية بسيطة: {err_msg}")
                 else:
                     await message.reply("أنا معك، تفضل بشو أقدر أخدمك؟")
+            except requests.exceptions.Timeout:
+                print("⚠️ انتهت مهلة الاتصال (Timeout) مع سيرفرات جوجل.")
+                await message.reply("معليش أخذت وقت أطول من المعتاد، جرب ترسل رسالتك مرة ثانية.")
             except Exception as e:
                 print(f"خطأ أثناء الاتصال: {e}")
                 await message.reply("صار فيه خطأ بسيط، جرب مرة ثانية.")
 
 bot.run(TOKEN)
+
