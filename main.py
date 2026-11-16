@@ -12,7 +12,6 @@ GEMINI_API_KEY = os.getenv("GEMINI_API_KEY")
 if not TOKEN or not GEMINI_API_KEY:
     raise ValueError("⚠️ تأكد من إضافة DISCORD_TOKEN و GEMINI_API_KEY في متغيرات البيئة!")
 
-# تهيئة العميل مع تمرير المفتاح بشكل يدعم التوكنات الحديثة
 client = genai.Client(api_key=GEMINI_API_KEY)
 
 SYSTEM_INSTRUCTION = (
@@ -96,9 +95,8 @@ async def on_message(message):
             reply_text = None
             for attempt in range(3):
                 try:
-                    # استخدام النموذج القياسي المتوافق مع التوكنات الجديدة
                     response = client.models.generate_content(
-                        model='gemini-2.5-flash',
+                        model='gemini-3.8-flash',
                         contents=clean_content,
                         config=types.GenerateContentConfig(
                             system_instruction=SYSTEM_INSTRUCTION,
@@ -116,6 +114,6 @@ async def on_message(message):
             if reply_text:
                 await message.reply(reply_text)
             else:
-                await message.reply("أنا معك، تفضل كيف أقدر أخدمك؟")
+                await message.reply("أنا معك، تفضل بشو أقدر أخدمك؟")
 
 bot.run(TOKEN)
