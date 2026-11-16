@@ -10,7 +10,7 @@ GEMINI_API_KEY = os.getenv("GEMINI_API_KEY")
 if not TOKEN or not GEMINI_API_KEY:
     raise ValueError("⚠️ تأكد من إضافة DISCORD_TOKEN و GEMINI_API_KEY في متغيرات البيئة!")
 
-# إعداد المكتبة الكلاسيكية المستقرة
+# إعداد المكتبة الكلاسيكية
 genai.configure(api_key=GEMINI_API_KEY)
 
 SYSTEM_INSTRUCTION = (
@@ -47,9 +47,17 @@ SYSTEM_INSTRUCTION = (
     "- للطلب أو الاستفسار التوجيه يكون روم <#1566292020002295921>."
 )
 
-# استخدام الموديل الكلاسيكي المستقر والثابت
+# اختيار الموديل المتوفر والشغال تلقائياً بدون تدوير يدوي
+try:
+    available_models = [m.name for m in genai.list_models() if 'generateContent' in m.supported_generation_methods]
+    selected_model_name = next((m for m in available_models if 'flash' in m), available_models[0])
+    print(f"✅ تم اختيار الموديل بنجاح: {selected_model_name}")
+except Exception as e:
+    print(f"⚠️ خطأ في جلب الموديلات تلقائياً، سيتم استخدام الموديل الافتراضي: {e}")
+    selected_model_name = "models/gemini-1.5-flash"
+
 model = genai.GenerativeModel(
-    model_name="gemini-1.5-flash",
+    model_name=selected_model_name,
     system_instruction=SYSTEM_INSTRUCTION
 )
 
