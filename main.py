@@ -90,8 +90,8 @@ async def on_message(message):
 
         async with message.channel.typing():
             try:
-                # تحديث رابط الموديل إلى gemini-2.5-flash المعتمد للـ API
-                url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key={GEMINI_API_KEY}"
+                # استخدام الموديل الجديد gemini-3.8-flash اللي طلبته جوجل بالخطأ
+                url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-3.8-flash:generateContent?key={GEMINI_API_KEY}"
                 headers = {'Content-Type': 'application/json'}
                 payload = {
                     "contents": [{"parts": [{"text": clean_content}]}],
