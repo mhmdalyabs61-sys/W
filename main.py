@@ -90,7 +90,8 @@ async def on_message(message):
 
         async with message.channel.typing():
             try:
-                url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key={GEMINI_API_KEY}"
+                # تحديث رابط الموديل إلى gemini-2.5-flash المعتمد للـ API
+                url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key={GEMINI_API_KEY}"
                 headers = {'Content-Type': 'application/json'}
                 payload = {
                     "contents": [{"parts": [{"text": clean_content}]}],
@@ -101,7 +102,6 @@ async def on_message(message):
                 res = requests.post(url, headers=headers, data=json.dumps(payload))
                 data = res.json()
                 
-                # طباعة الاستجابة بالكامل في اللوقز لمراقبة أي تفاصيل
                 print(f"استجابة جوجل: {data}")
                 
                 if "candidates" in data and data["candidates"]:
