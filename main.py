@@ -48,9 +48,9 @@ SYSTEM_INSTRUCTION = (
     "- للطلب أو الاستفسار التوجيه يكون روم <#1566292020002295921>."
 )
 
-# استخدام الموديل مع تعليمات النظام
+# استخدام موديل gemini-pro المتوافق مع المفتاح
 model = genai.GenerativeModel(
-    model_name="gemini-1.5-flash",
+    model_name="gemini-pro",
     system_instruction=SYSTEM_INSTRUCTION
 )
 
