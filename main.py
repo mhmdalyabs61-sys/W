@@ -2,7 +2,7 @@ import os
 import discord
 from discord import app_commands
 from discord.ext import commands
-from google import genai
+import google.generativeai as genai
 
 TOKEN = os.getenv("DISCORD_TOKEN")
 GEMINI_API_KEY = os.getenv("GEMINI_API_KEY")
@@ -10,8 +10,8 @@ GEMINI_API_KEY = os.getenv("GEMINI_API_KEY")
 if not TOKEN or not GEMINI_API_KEY:
     raise ValueError("⚠️ تأكد من إضافة DISCORD_TOKEN و GEMINI_API_KEY في متغيرات البيئة!")
 
-# تهيئة العميل بالحزمة الحديثة
-client = genai.Client(api_key=GEMINI_API_KEY)
+# إعداد المكتبة الكلاسيكية المستقرة
+genai.configure(api_key=GEMINI_API_KEY)
 
 SYSTEM_INSTRUCTION = (
     "أنت مساعد ذكي وممثل رسمي لفريق متجر دسكورد. أسلوبك عفوي، وفيّ، وبدون سماجة.\n\n"
@@ -45,6 +45,12 @@ SYSTEM_INSTRUCTION = (
     "ملاحظات مهمة للزباين:\n"
     "- السورسات ما عليها شرح.\n"
     "- للطلب أو الاستفسار التوجيه يكون روم <#1566292020002295921>."
+)
+
+# استخدام الموديل الكلاسيكي المستقر والثابت
+model = genai.GenerativeModel(
+    model_name="gemini-1.5-flash",
+    system_instruction=SYSTEM_INSTRUCTION
 )
 
 intents = discord.Intents.default()
@@ -92,19 +98,14 @@ async def on_message(message):
 
         async with message.channel.typing():
             try:
-                # استخدام أحدث موديل مستقر ومعتمد رسمياً في السيرفرات الحالية
-                response = client.models.generate_content(
-                    model='gemini-2.5-flash',
-                    contents=clean_content,
-                    config={
-                        'system_instruction': SYSTEM_INSTRUCTION,
-                        'temperature': 0.7,
-                    }
+                response = model.generate_content(
+                    clean_content,
+                    generation_config={"temperature": 0.7}
                 )
                 if response and response.text:
                     await message.reply(response.text)
             except Exception as e:
                 print(f"خطأ أثناء توليد الرد: {e}")
-                await message.reply("صار ضغط بسيط، جرب مرة ثانية.")
+                await message.reply("صار فيه خطأ بسيط، جرب مرة ثانية بعد شوي.")
 
 bot.run(TOKEN)
