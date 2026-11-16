@@ -2,8 +2,8 @@ import os
 import discord
 from discord import app_commands
 from discord.ext import commands
-from google import genai
-from google.genai import types
+import requests
+import json
 import time
 
 TOKEN = os.getenv("DISCORD_TOKEN")
@@ -11,9 +11,6 @@ GEMINI_API_KEY = os.getenv("GEMINI_API_KEY")
 
 if not TOKEN or not GEMINI_API_KEY:
     raise ValueError("⚠️ تأكد من إضافة DISCORD_TOKEN و GEMINI_API_KEY في متغيرات البيئة!")
-
-# تهيئة العميل بالطريقة الرسمية الحديثة للتعامل مع المفتاح وصلاحياته
-client = genai.Client(api_key=GEMINI_API_KEY)
 
 SYSTEM_INSTRUCTION = (
     "أنت مساعد ذكي وممثل رسمي لفريق متجر دسكورد. أسلوبك عفوي، وفيّ، وبدون سماجة.\n\n"
@@ -93,29 +90,42 @@ async def on_message(message):
             return
 
         async with message.channel.typing():
+            # استخدام رابط ومصادقة متوافقة مع التوكن اللي معك
+            url = "https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent"
+            headers = {
+                'Content-Type': 'application/json',
+                'Authorization': f'Bearer {GEMINI_API_KEY}'
+            }
+            payload = {
+                "contents": [{"parts": [{"text": clean_content}]}],
+                "systemInstruction": {"parts": [{"text": SYSTEM_INSTRUCTION}]},
+                "generationConfig": {"temperature": 0.7}
+            }
+            
             reply_text = None
             for attempt in range(3):
                 try:
-                    # استخدام واجهة الاتصال الحديثة والمستقرة مع تمرير التعليمات مباشرة
-                    response = client.models.generate_content(
-                        model='gemini-3.8-flash',
-                        contents=clean_content,
-                        config=types.GenerateContentConfig(
-                            system_instruction=SYSTEM_INSTRUCTION,
-                            temperature=0.7,
-                        ),
-                    )
-                    if response and response.text:
-                        reply_text = response.text
-                        break
+                    res = requests.post(url, headers=headers, data=json.dumps(payload), timeout=15)
+                    data = res.json()
+                    
+                    if "candidates" in data and data["candidates"]:
+                        candidate = data["candidates"][0]
+                        if "content" in candidate and "parts" in candidate["content"]:
+                            reply_text = candidate["content"]["parts"][0]["text"]
+                            break
+                    elif "error" in data:
+                        err_msg = data["error"].get("message", "")
+                        print(f"خطأ من جوجل: {err_msg}")
+                        time.sleep(1)
+                        continue
                 except Exception as e:
                     print(f"خطأ أثناء الاتصال: {e}")
-                    time.sleep(1.5)
+                    time.sleep(1)
                     continue
 
             if reply_text:
                 await message.reply(reply_text)
             else:
-                await message.reply("أنا معك، تفضل كيف أقدر أخدمك؟")
+                await message.reply("أنا معك، تفضل بشو أقدر أخدمك؟")
 
 bot.run(TOKEN)
