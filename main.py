@@ -4,7 +4,6 @@ from discord import app_commands
 from discord.ext import commands
 from google import genai
 from google.genai import types
-import time
 
 TOKEN = os.getenv("DISCORD_TOKEN")
 GEMINI_API_KEY = os.getenv("GEMINI_API_KEY")
@@ -12,6 +11,7 @@ GEMINI_API_KEY = os.getenv("GEMINI_API_KEY")
 if not TOKEN or not GEMINI_API_KEY:
     raise ValueError("⚠️ تأكد من إضافة DISCORD_TOKEN و GEMINI_API_KEY في متغيرات البيئة!")
 
+# تهيئة العميل 
 client = genai.Client(api_key=GEMINI_API_KEY)
 
 SYSTEM_INSTRUCTION = (
@@ -92,28 +92,22 @@ async def on_message(message):
             return
 
         async with message.channel.typing():
-            reply_text = None
-            for attempt in range(3):
-                try:
-                    response = client.models.generate_content(
-                        model='gemini-3.8-flash',
-                        contents=clean_content,
-                        config=types.GenerateContentConfig(
-                            system_instruction=SYSTEM_INSTRUCTION,
-                            temperature=0.7,
-                        ),
-                    )
-                    if response and response.text:
-                        reply_text = response.text
-                        break
-                except Exception as e:
-                    print(f"خطأ أثناء الاتصال: {e}")
-                    time.sleep(1.5)
-                    continue
-
-            if reply_text:
-                await message.reply(reply_text)
-            else:
+            try:
+                # استخدام الموديل المعتمد
+                response = client.models.generate_content(
+                    model='gemini-3.8-flash',
+                    contents=clean_content,
+                    config=types.GenerateContentConfig(
+                        system_instruction=SYSTEM_INSTRUCTION,
+                        temperature=0.7,
+                    ),
+                )
+                if response and response.text:
+                    await message.reply(response.text)
+                else:
+                    await message.reply("أنا معك، تفضل بشو أقدر أخدمك؟")
+            except Exception as e:
+                print(f"خطأ أثناء توليد الرد: {e}")
                 await message.reply("أنا معك، تفضل بشو أقدر أخدمك؟")
 
 bot.run(TOKEN)
