@@ -90,7 +90,6 @@ async def on_message(message):
 
         async with message.channel.typing():
             try:
-                # استخدام رابط الموديل المباشر المستقر عبر REST API
                 url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key={GEMINI_API_KEY}"
                 headers = {'Content-Type': 'application/json'}
                 payload = {
@@ -102,13 +101,22 @@ async def on_message(message):
                 res = requests.post(url, headers=headers, data=json.dumps(payload))
                 data = res.json()
                 
-                # التحقق الآمن من وجود الرد وعدم وقوع خطأ
-                if "candidates" in data and len(data["candidates"]) > 0:
-                    reply_text = data["candidates"][0]["content"]["parts"][0]["text"]
-                    await message.reply(reply_text)
+                # طباعة الاستجابة بالكامل في اللوقز لمراقبة أي تفاصيل
+                print(f"استجابة جوجل: {data}")
+                
+                if "candidates" in data and data["candidates"]:
+                    candidate = data["candidates"][0]
+                    if "content" in candidate and "parts" in candidate["content"]:
+                        reply_text = candidate["content"]["parts"][0]["text"]
+                        await message.reply(reply_text)
+                    else:
+                        await message.reply("تفضل، اطرح سؤالك أو استفسارك وسأجيبك فوراً.")
+                elif "error" in data:
+                    err_msg = data["error"].get("message", "خطأ غير معروف")
+                    print(f"خطأ من جوجل: {err_msg}")
+                    await message.reply(f"عذراً، واجهتني مشكلة تقنية بسيطة: {err_msg}")
                 else:
-                    print(f"⚠️ استجابة غير متوقعة من سيرفرات جوجل: {data}")
-                    await message.reply("هلا والله! تفضل كيف أقدر أخدمك بخصوص سورسات المتجر؟")
+                    await message.reply("أنا معك، تفضل بشو أقدر أخدمك؟")
             except Exception as e:
                 print(f"خطأ أثناء الاتصال: {e}")
                 await message.reply("صار فيه خطأ بسيط، جرب مرة ثانية.")
