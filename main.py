@@ -2,7 +2,8 @@ import os
 import discord
 from discord import app_commands
 from discord.ext import commands
-import google.generativeai as genai
+from google import genai
+from google.genai import types
 import time
 
 TOKEN = os.getenv("DISCORD_TOKEN")
@@ -11,8 +12,8 @@ GEMINI_API_KEY = os.getenv("GEMINI_API_KEY")
 if not TOKEN or not GEMINI_API_KEY:
     raise ValueError("⚠️ تأكد من إضافة DISCORD_TOKEN و GEMINI_API_KEY في متغيرات البيئة!")
 
-# إعداد مكتبة جوجل الرسمية
-genai.configure(api_key=GEMINI_API_KEY)
+# تهيئة العميل بالطريقة الرسمية الحديثة للتعامل مع المفتاح وصلاحياته
+client = genai.Client(api_key=GEMINI_API_KEY)
 
 SYSTEM_INSTRUCTION = (
     "أنت مساعد ذكي وممثل رسمي لفريق متجر دسكورد. أسلوبك عفوي، وفيّ، وبدون سماجة.\n\n"
@@ -46,12 +47,6 @@ SYSTEM_INSTRUCTION = (
     "ملاحظات مهمة للزباين:\n"
     "- السورسات ما عليها شرح.\n"
     "- للطلب أو الاستفسار التوجيه يكون روم <#1566292020002295921>."
-)
-
-# استخدام موديل gemini-pro المتوافق مع المفتاح
-model = genai.GenerativeModel(
-    model_name="gemini-pro",
-    system_instruction=SYSTEM_INSTRUCTION
 )
 
 intents = discord.Intents.default()
@@ -101,7 +96,15 @@ async def on_message(message):
             reply_text = None
             for attempt in range(3):
                 try:
-                    response = model.generate_content(clean_content)
+                    # استخدام واجهة الاتصال الحديثة والمستقرة مع تمرير التعليمات مباشرة
+                    response = client.models.generate_content(
+                        model='gemini-2.5-flash',
+                        contents=clean_content,
+                        config=types.GenerateContentConfig(
+                            system_instruction=SYSTEM_INSTRUCTION,
+                            temperature=0.7,
+                        ),
+                    )
                     if response and response.text:
                         reply_text = response.text
                         break
@@ -113,6 +116,6 @@ async def on_message(message):
             if reply_text:
                 await message.reply(reply_text)
             else:
-                await message.reply("أنا معك، تفضل بشو أقدر أخدمك؟")
+                await message.reply("أنا معك، تفضل كيف أقدر أخدمك؟")
 
 bot.run(TOKEN)
