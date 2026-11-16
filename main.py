@@ -4,6 +4,7 @@ from discord import app_commands
 from discord.ext import commands
 import requests
 import json
+import time
 
 TOKEN = os.getenv("DISCORD_TOKEN")
 GEMINI_API_KEY = os.getenv("GEMINI_API_KEY")
@@ -89,37 +90,45 @@ async def on_message(message):
             return
 
         async with message.channel.typing():
-            try:
-                # استخدام الموديل الصحيح والمطلوب gemini-3.8-flash
-                url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-3.8-flash:generateContent?key={GEMINI_API_KEY}"
-                headers = {'Content-Type': 'application/json'}
-                payload = {
-                    "contents": [{"parts": [{"text": clean_content}]}],
-                    "systemInstruction": {"parts": [{"text": SYSTEM_INSTRUCTION}]},
-                    "generationConfig": {"temperature": 0.7}
-                }
-                
-                res = requests.post(url, headers=headers, data=json.dumps(payload), timeout=15)
-                data = res.json()
-                
-                if "candidates" in data and data["candidates"]:
-                    candidate = data["candidates"][0]
-                    if "content" in candidate and "parts" in candidate["content"]:
-                        reply_text = candidate["content"]["parts"][0]["text"]
-                        await message.reply(reply_text)
-                    else:
-                        await message.reply("تفضل، اطرح سؤالك أو استفسارك وسأجيبك فوراً.")
-                elif "error" in data:
-                    err_msg = data["error"].get("message", "خطأ غير معروف")
-                    print(f"خطأ من جوجل: {err_msg}")
-                    await message.reply(f"عذراً، واجهتني مشكلة تقنية بسيطة: {err_msg}")
-                else:
-                    await message.reply("أنا معك، تفضل بشو أقدر أخدمك؟")
-            except requests.exceptions.Timeout:
-                print("⚠️ انتهت مهلة الاتصال مع السيرفر.")
-                await message.reply("معليش أخذت وقت أطول من المعتاد، جرب ترسل رسالتك مرة ثانية.")
-            except Exception as e:
-                print(f"خطأ أثناء الاتصال: {e}")
-                await message.reply("صار فيه خطأ بسيط، جرب مرة ثانية.")
+            # استخدام نظام التوثيق المناسب للمفتاح
+            url = "https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent"
+            headers = {
+                'Content-Type': 'application/json',
+                'Authorization': f'Bearer {GEMINI_API_KEY}'
+            }
+            payload = {
+                "contents": [{"parts": [{"text": clean_content}]}],
+                "systemInstruction": {"parts": [{"text": SYSTEM_INSTRUCTION}]},
+                "generationConfig": {"temperature": 0.7}
+            }
+            
+            reply_text = None
+            for attempt in range(3):
+                try:
+                    res = requests.post(url, headers=headers, data=json.dumps(payload), timeout=15)
+                    data = res.json()
+                    
+                    if "candidates" in data and data["candidates"]:
+                        candidate = data["candidates"][0]
+                        if "content" in candidate and "parts" in candidate["content"]:
+                            reply_text = candidate["content"]["parts"][0]["text"]
+                            break
+                    elif "error" in data:
+                        err_msg = data["error"].get("message", "")
+                        print(f"خطأ من جوجل: {err_msg}")
+                        if "high demand" in err_msg.lower() or "overloaded" in err_msg.lower():
+                            time.sleep(1.5)
+                            continue
+                        else:
+                            break
+                except Exception as e:
+                    print(f"خطأ أثناء الاتصال: {e}")
+                    time.sleep(1)
+                    continue
+
+            if reply_text:
+                await message.reply(reply_text)
+            else:
+                await message.reply("أنا معك، تفضل بشو أقدر أخدمك؟")
 
 bot.run(TOKEN)
