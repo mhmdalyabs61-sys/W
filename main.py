@@ -2,15 +2,14 @@ import os
 import discord
 from discord import app_commands
 from discord.ext import commands
-import google.generativeai as genai
+import requests
+import json
 
 TOKEN = os.getenv("DISCORD_TOKEN")
 GEMINI_API_KEY = os.getenv("GEMINI_API_KEY")
 
 if not TOKEN or not GEMINI_API_KEY:
     raise ValueError("⚠️ تأكد من إضافة DISCORD_TOKEN و GEMINI_API_KEY في متغيرات البيئة!")
-
-genai.configure(api_key=GEMINI_API_KEY)
 
 SYSTEM_INSTRUCTION = (
     "أنت مساعد ذكي وممثل رسمي لفريق متجر دسكورد. أسلوبك عفوي، وفيّ، وبدون سماجة.\n\n"
@@ -44,12 +43,6 @@ SYSTEM_INSTRUCTION = (
     "ملاحظات مهمة للزباين:\n"
     "- السورسات ما عليها شرح.\n"
     "- للطلب أو الاستفسار التوجيه يكون روم <#1566292020002295921>."
-)
-
-# فرض الموديل الجديد الذي طلبه النظام بالصورة مباشرة
-model = genai.GenerativeModel(
-    model_name="gemini-3.8-flash",
-    system_instruction=SYSTEM_INSTRUCTION
 )
 
 intents = discord.Intents.default()
@@ -97,14 +90,21 @@ async def on_message(message):
 
         async with message.channel.typing():
             try:
-                response = model.generate_content(
-                    clean_content,
-                    generation_config={"temperature": 0.7}
-                )
-                if response and response.text:
-                    await message.reply(response.text)
+                url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key={GEMINI_API_KEY}"
+                headers = {'Content-Type': 'application/json'}
+                payload = {
+                    "contents": [{"parts": [{"text": clean_content}]}],
+                    "systemInstruction": {"parts": [{"text": SYSTEM_INSTRUCTION}]},
+                    "generationConfig": {"temperature": 0.7}
+                }
+                
+                res = requests.post(url, headers=headers, data=json.dumps(payload))
+                data = res.json()
+                
+                reply_text = data['candidates'][0]['content']['parts'][0]['text']
+                await message.reply(reply_text)
             except Exception as e:
-                print(f"خطأ أثناء توليد الرد: {e}")
-                await message.reply("صار فيه خطأ بسيط، جرب مرة ثانية بعد شوي.")
+                print(f"خطأ أثناء الاتصال: {e}")
+                await message.reply("صار فيه خطأ بسيط، جرب مرة ثانية.")
 
 bot.run(TOKEN)
