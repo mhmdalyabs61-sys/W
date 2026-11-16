@@ -1,17 +1,20 @@
-import os
+iimport os
 import discord
 from discord import app_commands
 from discord.ext import commands
 from google import genai
 
+# جلب المفاتيح من متغيرات البيئة (Railway)
 TOKEN = os.getenv("DISCORD_TOKEN")
 GEMINI_API_KEY = os.getenv("GEMINI_API_KEY")
 
 if not TOKEN or not GEMINI_API_KEY:
     raise ValueError("⚠️ تأكد من إضافة DISCORD_TOKEN و GEMINI_API_KEY في متغيرات البيئة!")
 
+# تهيئة العميل بالحزمة الرسمية الجديدة
 client = genai.Client(api_key=GEMINI_API_KEY)
 
+# التعليمات الأساسية للبوت (System Prompt) مع السورسات والأسعار
 SYSTEM_INSTRUCTION = (
     "أنت مساعد ذكي وممثل رسمي لفريق متجر دسكورد. أسلوبك عفوي، وفيّ، وبدون سماجة.\n\n"
     "قواعدك الصارمة:\n"
@@ -91,9 +94,9 @@ async def on_message(message):
 
         async with message.channel.typing():
             try:
-                # استخدام الموديل المستقر والمعتمد للإنتاج
+                # استخدام الموديل المستقر والمعتمد gemini-2.0-flash المتوافق مع SDK الجديد
                 response = client.models.generate_content(
-                    model='gemini-1.5-flash',
+                    model='gemini-2.0-flash',
                     contents=clean_content,
                     config={
                         'system_instruction': SYSTEM_INSTRUCTION,
