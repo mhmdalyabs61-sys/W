@@ -2,8 +2,7 @@ import os
 import discord
 from discord import app_commands
 from discord.ext import commands
-import requests
-import json
+import google.generativeai as genai
 import time
 
 TOKEN = os.getenv("DISCORD_TOKEN")
@@ -11,6 +10,9 @@ GEMINI_API_KEY = os.getenv("GEMINI_API_KEY")
 
 if not TOKEN or not GEMINI_API_KEY:
     raise ValueError("⚠️ تأكد من إضافة DISCORD_TOKEN و GEMINI_API_KEY في متغيرات البيئة!")
+
+# إعداد مكتبة جوجل الرسمية
+genai.configure(api_key=GEMINI_API_KEY)
 
 SYSTEM_INSTRUCTION = (
     "أنت مساعد ذكي وممثل رسمي لفريق متجر دسكورد. أسلوبك عفوي، وفيّ، وبدون سماجة.\n\n"
@@ -44,6 +46,12 @@ SYSTEM_INSTRUCTION = (
     "ملاحظات مهمة للزباين:\n"
     "- السورسات ما عليها شرح.\n"
     "- للطلب أو الاستفسار التوجيه يكون روم <#1566292020002295921>."
+)
+
+# استخدام الموديل مع تعليمات النظام
+model = genai.GenerativeModel(
+    model_name="gemini-1.5-flash",
+    system_instruction=SYSTEM_INSTRUCTION
 )
 
 intents = discord.Intents.default()
@@ -90,40 +98,16 @@ async def on_message(message):
             return
 
         async with message.channel.typing():
-            # استخدام نظام التوثيق المناسب للمفتاح
-            url = "https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent"
-            headers = {
-                'Content-Type': 'application/json',
-                'Authorization': f'Bearer {GEMINI_API_KEY}'
-            }
-            payload = {
-                "contents": [{"parts": [{"text": clean_content}]}],
-                "systemInstruction": {"parts": [{"text": SYSTEM_INSTRUCTION}]},
-                "generationConfig": {"temperature": 0.7}
-            }
-            
             reply_text = None
             for attempt in range(3):
                 try:
-                    res = requests.post(url, headers=headers, data=json.dumps(payload), timeout=15)
-                    data = res.json()
-                    
-                    if "candidates" in data and data["candidates"]:
-                        candidate = data["candidates"][0]
-                        if "content" in candidate and "parts" in candidate["content"]:
-                            reply_text = candidate["content"]["parts"][0]["text"]
-                            break
-                    elif "error" in data:
-                        err_msg = data["error"].get("message", "")
-                        print(f"خطأ من جوجل: {err_msg}")
-                        if "high demand" in err_msg.lower() or "overloaded" in err_msg.lower():
-                            time.sleep(1.5)
-                            continue
-                        else:
-                            break
+                    response = model.generate_content(clean_content)
+                    if response and response.text:
+                        reply_text = response.text
+                        break
                 except Exception as e:
                     print(f"خطأ أثناء الاتصال: {e}")
-                    time.sleep(1)
+                    time.sleep(1.5)
                     continue
 
             if reply_text:
